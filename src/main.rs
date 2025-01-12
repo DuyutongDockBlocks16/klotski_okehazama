@@ -2,6 +2,7 @@ use crate::board::{Board, ExitSide};
 
 mod block;
 mod board;
+mod game;
 
 fn initialize_box() -> Board {
     let height:u8 = 5;
@@ -24,6 +25,7 @@ fn main() {
 
     let mut board = initialize_box();
     let mut imagawa_block = block::Block::new(
+        0,
         "Imagawa Yoshimoto",
         "今川義元",
         2,
@@ -33,6 +35,7 @@ fn main() {
     );
 
     let mut oda_bloc = block::Block::new(
+        1,
         "Oda Nobunaga",
         "織田信長",
         2,
@@ -41,12 +44,14 @@ fn main() {
         false
     );
 
-    board.display();
 
-    imagawa_block.display();
 
     board.add_block(imagawa_block);
-    board.add_block(oda_bloc)
+    board.add_block(oda_bloc);
+
+    // board.display();
+
+
 
 }
 

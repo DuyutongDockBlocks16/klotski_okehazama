@@ -16,10 +16,10 @@ pub struct ExitPosition {
 }
 
 pub struct Board {
-    width: u8,                   // 宽度
-    height: u8,                  // 高度
-    exit_position: ExitPosition,//出口位置
-    blocks: Vec<Block>
+    pub width: u8,                   // 宽度
+    pub height: u8,                  // 高度
+    pub exit_position: ExitPosition,//出口位置
+    pub blocks: Vec<Block>
 }
 
 impl Board {
@@ -43,6 +43,25 @@ impl Board {
             self.exit_position.distance_to_edge,
             self.exit_position.length
         );
+
+        if self.blocks.is_empty() {
+            println!("No blocks on the board.");
+        } else {
+            println!("Blocks on the board:");
+            for (i, block) in self.blocks.iter().enumerate() {
+                println!(
+                    "  Block {}: Name (EN): {}, Name (JP): {}, Width: {}, Height: {}, Initial Location: {:?}, Current Location: {:?}, Can Escape: {}",
+                    block.block_id,
+                    block.block_english_name,
+                    block.block_japanese_name,
+                    block.width,
+                    block.height,
+                    block.initial_location,
+                    block.current_location,
+                    block.can_escape
+                );
+            }
+        }
     }
 
     pub fn add_block(&mut self, new_block: Block){
