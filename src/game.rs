@@ -1,4 +1,4 @@
-use crate::board::Board;
+use crate::board::{Board, ExitSide};
 use std::collections::HashMap;
 
 pub struct Game {
@@ -88,4 +88,23 @@ impl Game {
 
         return (authorization_passed_flag, return_message)
     }
+
+    pub fn authorize_game_exit_location(&self) -> bool{
+        let mut authorization_passed_flag:bool = true;
+
+        if self.board_with_blocks.exit_position.side == ExitSide::Bottom
+            || self.board_with_blocks.exit_position.side == ExitSide::Top {
+            if self.board_with_blocks.exit_position.distance_to_edge + self.board_with_blocks.exit_position.length
+                > self.board_with_blocks.width {
+                authorization_passed_flag = false;
+            }
+        } else {
+            if self.board_with_blocks.exit_position.distance_to_edge + self.board_with_blocks.exit_position.length
+                > self.board_with_blocks.height{
+                authorization_passed_flag = false;
+            }
+        }
+        return authorization_passed_flag;
+    }
+
 }

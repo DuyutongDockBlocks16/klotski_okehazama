@@ -1,6 +1,6 @@
 use crate::block::Block;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ExitSide {
     Top,    // 上侧
     Bottom, // 下侧
