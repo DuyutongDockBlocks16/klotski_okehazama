@@ -22,7 +22,7 @@ fn initialize_box() -> Board {
 fn main() {
     // println!("Hello, world!");
 
-    let board = initialize_box();
+    let mut board = initialize_box();
     let mut imagawa_block = block::Block::new(
         "Imagawa Yoshimoto",
         "今川義元",
@@ -32,9 +32,21 @@ fn main() {
         true
     );
 
+    let mut oda_bloc = block::Block::new(
+        "Oda Nobunaga",
+        "織田信長",
+        2,
+        1,
+        (1, 3),
+        false
+    );
+
     board.display();
 
     imagawa_block.display();
+
+    board.add_block(imagawa_block);
+    board.add_block(oda_bloc)
 
 }
 

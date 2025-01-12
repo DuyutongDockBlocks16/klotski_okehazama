@@ -1,3 +1,5 @@
+use crate::block::Block;
+
 #[derive(Debug)]
 pub enum ExitSide {
     Top,    // 上侧
@@ -16,7 +18,8 @@ pub struct ExitPosition {
 pub struct Board {
     width: u8,                   // 宽度
     height: u8,                  // 高度
-    exit_position: ExitPosition //出口位置
+    exit_position: ExitPosition,//出口位置
+    blocks: Vec<Block>
 }
 
 impl Board {
@@ -26,6 +29,7 @@ impl Board {
             width,
             height,
             exit_position,
+            blocks: vec![],
         }
     }
 
@@ -39,5 +43,9 @@ impl Board {
             self.exit_position.distance_to_edge,
             self.exit_position.length
         );
+    }
+
+    pub fn add_block(&mut self, new_block: Block){
+        self.blocks.push(new_block);
     }
 }
