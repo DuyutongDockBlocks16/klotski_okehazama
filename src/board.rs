@@ -50,14 +50,13 @@ impl Board {
             println!("Blocks on the board:");
             for (i, block) in self.blocks.iter().enumerate() {
                 println!(
-                    "  Block {}: Name (EN): {}, Name (JP): {}, Width: {}, Height: {}, Initial Location: {:?}, Current Location: {:?}, Can Escape: {}",
+                    "  Block {}: Name (EN): {}, Name (JP): {}, Width: {}, Height: {}, Initial Location: {:?}, Can Escape: {}",
                     block.block_id,
                     block.block_english_name,
                     block.block_japanese_name,
                     block.width,
                     block.height,
                     block.initial_location,
-                    block.current_location,
                     block.can_escape
                 );
             }

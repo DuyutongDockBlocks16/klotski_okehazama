@@ -26,28 +26,28 @@ impl Game {
 
         // 首先检查是否有棋子摆放超出边界
         self.board_with_blocks.blocks.iter().for_each(|block| {
-            if block.current_location.0 < 0 {
+            if block.initial_location.0 < 0 {
                 authorization_passed_flag = false;
                 return_message.push_str(
                     &format!("Block name: {} initial location exceeds the left border;\n", block.block_english_name)
                 );
             }
 
-            if block.current_location.0 > self.board_with_blocks.width - 1 {
+            if block.initial_location.0 > self.board_with_blocks.width - 1 {
                 authorization_passed_flag = false;
                 return_message.push_str(
                     &format!("Block name: {} initial location exceeds the right border;\n", block.block_english_name)
                 );
             }
 
-            if block.current_location.1 < 1 {
+            if block.initial_location.1 < 1 {
                 authorization_passed_flag = false;
                 return_message.push_str(
                     &format!("Block name: {} initial location exceeds the bottom border;\n", block.block_english_name)
                 );
             }
 
-            if block.current_location.1 > self.board_with_blocks.height {
+            if block.initial_location.1 > self.board_with_blocks.height {
                 authorization_passed_flag = false;
                 // println!("{:?}",block.current_location);
                 // println!("{:?}",self.board_with_blocks.height);
@@ -58,7 +58,7 @@ impl Game {
 
             for i in 0..block.width {
                 for j in 0..block.height {
-                    occupied_grids.push((block.current_location.0+i,block.current_location.1-j,block.block_english_name.to_string()))
+                    occupied_grids.push((block.initial_location.0+i,block.initial_location.1-j,block.block_english_name.to_string()))
                 }
             }
 

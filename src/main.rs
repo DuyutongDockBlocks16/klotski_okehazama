@@ -1,8 +1,12 @@
 use crate::board::{Board, ExitSide};
+use std::fs::File;
+use std::io::Read;
+use crate::block::Block;
 
 mod block;
 mod board;
 mod game;
+
 
 fn initialize_box() -> Board {
     let height:u8 = 5;
@@ -20,47 +24,36 @@ fn initialize_box() -> Board {
     Board::new(width, height, exit_position)
 }
 
-fn main() {
+fn main() -> std::io::Result<()> {
     // println!("Hello, world!");
 
     let mut board = initialize_box();
-    let mut imagawa_block = block::Block::new(
-        0,
-        "Imagawa Yoshimoto",
-        "今川義元",
-        2,
-        2,
-        (1, 5),
-        true
-    );
 
-    let mut oda_bloc = block::Block::new(
-        1,
-        "Oda Nobunaga",
-        "織田信長",
-        2,
-        1,
-        (1, 3),
-        false
-    );
+    let mut file = File::open("./src/blocks.json")?;
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)?;
 
+    let blocks: Vec<Block> = serde_json::from_str(&contents).expect("Failed to parse JSON");
 
+    // 将读取的 Block 实例添加到 Board
+    for block in blocks {
+        board.add_block(block);
+    }
 
-    board.add_block(imagawa_block);
-    board.add_block(oda_bloc);
+    board.display();
 
     let mut game = game::Game::new(board);
 
-    if !game.authorize_game_blocks_amount() {
-        println!("The amount of blocks should more than 0!")
-    }
+    if game.authorize_game_blocks_amount(){
+        let (authorization_passed_flag, return_message) = game.authorize_game_blocks_location_conflict();
+        if authorization_passed_flag {
+            // game.initialize();
+            // game.start();
+            // game.over();
+        } else { println!("{}", return_message); }
+    } else { println!("The amount of blocks should more than 0!") }
 
-    let (authorization_passed_flag, return_message) = game.authorize_game_blocks_location_conflict();
-
-    if !authorization_passed_flag {
-        println!("{}", return_message);
-    }
-
+    Ok(())
 }
 
 
