@@ -48,7 +48,7 @@ impl Board {
             println!("No blocks on the board.");
         } else {
             println!("Blocks on the board:");
-            for (i, block) in self.blocks.iter().enumerate() {
+            for (_, block) in self.blocks.iter().enumerate() {
                 println!(
                     "  Block {}: Name (EN): {}, Name (JP): {}, Width: {}, Height: {}, Initial Location: {:?}, Can Escape: {}",
                     block.block_id,
