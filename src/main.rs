@@ -17,7 +17,7 @@ fn initialize_box() -> Board {
         length,
     };
 
-    Board::new(height, width, exit_position)
+    Board::new(width, height, exit_position)
 }
 
 fn main() {
@@ -49,9 +49,17 @@ fn main() {
     board.add_block(imagawa_block);
     board.add_block(oda_bloc);
 
-    // board.display();
+    let mut game = game::Game::new(board);
 
+    if !game.authorize_game_blocks_amount() {
+        println!("The amount of blocks should more than 0!")
+    }
 
+    let (authorization_passed_flag, return_message) = game.authorize_game_blocks_location_conflict();
+
+    if !authorization_passed_flag {
+        println!("{}", return_message);
+    }
 
 }
 

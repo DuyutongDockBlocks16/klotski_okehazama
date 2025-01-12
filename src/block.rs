@@ -4,8 +4,8 @@ pub struct Block {
     pub block_japanese_name: String, // 日文名称
     pub width: u8,                   // 宽度，假定为非负整数
     pub height: u8,                  // 高度，假定为非负整数
-    pub initial_location: (i16, i16), // 初始位置(x,y)
-    pub current_location: (i16, i16), // 当前的位置(x,y)
+    pub initial_location: (u8, u8), // 初始位置(x,y)
+    pub current_location: (u8, u8), // 当前的位置(x,y)
     pub can_escape: bool,            // 是否可以逃脱
 }
 
@@ -17,7 +17,7 @@ impl Block {
         block_japanese_name: &str,
         width: u8,
         height: u8,
-        initial_location: (i16, i16),
+        initial_location: (u8, u8),
         can_escape: bool,
     ) -> Block {
         Block {
