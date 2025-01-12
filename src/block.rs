@@ -3,8 +3,8 @@ pub struct Block {
     block_japanese_name: String, // 日文名称
     width: u8,                   // 宽度，假定为非负整数
     height: u8,                  // 高度，假定为非负整数
-    initial_location: (i16, i16), // 初始位置
-    current_location: (i16, i16), // 当前的位置
+    initial_location: (i16, i16), // 初始位置(x,y)
+    current_location: (i16, i16), // 当前的位置(x,y)
     can_escape: bool,            // 是否可以逃脱
 }
 
@@ -55,6 +55,38 @@ impl Block {
         self.current_location = new_location;
         println!(
             "Location updated! New location is: ({}, {})",
+            self.current_location.0, self.current_location.0 -1
+        );
+    }
+
+    pub fn move_left(&mut self) {
+        self.current_location = (self.current_location.0 - 1 , self.current_location.1 );
+        println!(
+            "Location move left! New location is: ({}, {})",
+            self.current_location.0, self.current_location.1
+        );
+    }
+
+    pub fn move_right(&mut self) {
+        self.current_location = (self.current_location.0 + 1 , self.current_location.1 );
+        println!(
+            "Location move right! New location is: ({}, {})",
+            self.current_location.0, self.current_location.1
+        );
+    }
+
+    pub fn move_up(&mut self) {
+        self.current_location = (self.current_location.0 , self.current_location.1 + 1 );
+        println!(
+            "Location move up! New location is: ({}, {})",
+            self.current_location.0, self.current_location.1
+        );
+    }
+
+    pub fn move_down(&mut self) {
+        self.current_location = (self.current_location.0 , self.current_location.1 - 1 );
+        println!(
+            "Location move down! New location is: ({}, {})",
             self.current_location.0, self.current_location.1
         );
     }
