@@ -1,5 +1,6 @@
 use crate::board::{Board, ExitSide};
 use std::collections::HashMap;
+use serde::de::Unexpected::Option;
 use crate::block::Block;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -131,6 +132,55 @@ impl Game {
         return authorization_passed_flag;
     }
 
+    fn is_reach_the_top_bounds(&self, position: Position) -> bool {
+        return position.y == self.board_with_blocks.height-1;
+    }
+
+    fn is_reach_the_bottom_bounds(&self, position: Position) -> bool {
+        return position.y == 0;
+    }
+
+    fn is_reach_the_right_bounds(&self, position: Position) -> bool {
+        return position.x == self.board_with_blocks.width-1;
+    }
+
+    fn is_reach_the_left_bounds(&self, position: Position) -> bool {
+        return position.x == 0;
+    }
+
+    fn is_top_position_empty(&self, position: Position) -> bool {
+        self.grid[position.y + 1][position.x].is_none()
+    }
+
+    fn is_bottom_position_empty(&self, position: Position) -> bool {
+        self.grid[position.y - 1][position.x].is_none()
+    }
+
+    fn is_right_position_empty(&self, position: Position) -> bool {
+        self.grid[position.y][position.x + 1].is_none()
+    }
+
+    fn is_left_position_empty(&self, position: Position) -> bool {
+        self.grid[position.y][position.x - 1].is_none()
+    }
+
+    fn can_move_up(&self, position: Position) -> bool {
+        !self.is_reach_the_top_bounds(position) && self.is_top_position_empty(position)
+    }
+
+    fn can_move_down(&self, position: Position) -> bool {
+        !self.is_reach_the_bottom_bounds(position) && self.is_bottom_position_empty(position)
+    }
+
+    fn can_move_left(&self, position: Position) -> bool {
+        !self.is_reach_the_left_bounds(position) && self.is_left_position_empty(position)
+    }
+
+    fn can_right_left(&self, position: Position) -> bool {
+        !self.is_reach_the_right_bounds(position) && self.is_right_position_empty(position)
+    }
+
+
     pub fn initialize(&mut self) {
         // load blocks to board
         self.board_with_blocks.blocks.iter().for_each(|block|{
@@ -149,6 +199,35 @@ impl Game {
             };
             self.blocks_in_game.push(block_in_game)
         });
+
+        // initialize grid with empty
+        let grid = vec![
+            vec![None; self.board_with_blocks.width as usize];
+            self.board_with_blocks.height as usize
+        ]; // 初始化为空
+
+        // locate blocks to board
+        self.blocks_in_game.iter().for_each(|block|{
+            for i in 0..block.width {
+                for j in 0..block.height {
+                    grid[block.current_location.x + i][block.current_location.y + j] = Some(block);
+                }
+            }
+        });
+
+        self.blocks_in_game.iter().for_each(|block|{
+
+            // todo 思考一下这里怎么写
+
+            let mut can_move_up:bool = false;
+
+            for i in 0..block.width {
+                block.current_location
+            }
+        })
+
+
+
 
 
 
