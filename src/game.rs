@@ -14,6 +14,7 @@ pub struct Exit{
     exit_direction: ExitSide,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BlockInGame {
     pub block_id : u8,
     pub block_english_name: String,   // 英文名称
@@ -285,7 +286,7 @@ impl Game {
         });
 
         // initialize grid with empty
-        let mut grid = vec![
+        self.grid = vec![
             vec![None; self.board_with_blocks.width as usize];
             self.board_with_blocks.height as usize
         ]; // 初始化为空
@@ -332,16 +333,17 @@ impl Game {
         self.blocks_in_game.iter().for_each(|block|{
             for i in 0..block.width {
                 for j in 0..block.height {
-                    grid[ ( block.current_location.x + i as isize ) as usize ][ ( block.current_location.y + j as isize ) as usize ] = Some(block);
+                    let x = ( block.current_location.x + i as isize ) as usize;
+                    let y = ( block.current_location.y - j as isize ) as usize;
+
+                    self.grid[y][x] = Some(block.clone());
                 }
             }
         });
 
-        let blocks_in_game = &mut self.blocks_in_game;
-
-        // let can_move_up_fn = |position, can_escape_flag| self.can_move_up(position, can_escape_flag);
         // initialize ability of move
-        blocks_in_game.iter_mut().for_each(|block|{
+        let mut move_ability_of_blocks:Vec<( bool, bool, bool, bool)> = vec![]; // ("up", "down", "left", "right")
+        self.blocks_in_game.iter().for_each(|block|{
 
             let can_escape_flag: bool = block.can_escape;
 
@@ -355,7 +357,6 @@ impl Game {
                 }
             }
 
-            block.can_move_up = can_move_up_flag;
 
             let mut can_move_down_flag:bool = true;
 
@@ -366,7 +367,6 @@ impl Game {
                     break
                 }
             }
-            block.can_move_down = can_move_down_flag;
 
             let mut can_move_left_flag:bool = true;
 
@@ -377,7 +377,6 @@ impl Game {
                     break
                 }
             }
-            block.can_move_left = can_move_left_flag;
 
             let mut can_move_right_flag:bool = true;
 
@@ -388,13 +387,15 @@ impl Game {
                     break
                 }
             }
-            block.can_move_right = can_move_right_flag;
+            move_ability_of_blocks.push((can_move_up_flag, can_move_down_flag, can_move_left_flag, can_move_up_flag))
+        });
 
-        })
-
-
-
-
+        for (i, block) in self.blocks_in_game.iter_mut().enumerate(){
+            block.can_move_up = move_ability_of_blocks[i].0;
+            block.can_move_down = move_ability_of_blocks[i].1;
+            block.can_move_left = move_ability_of_blocks[i].2;
+            block.can_move_right = move_ability_of_blocks[i].3;
+        }
 
 
     }
