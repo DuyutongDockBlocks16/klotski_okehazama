@@ -48,7 +48,8 @@ fn main() -> std::io::Result<()> {
         if game.authorize_game_blocks_amount(){
             let (authorization_passed_flag, return_message) = game.authorize_game_blocks_location_conflict();
             if authorization_passed_flag {
-                // game.initialize();
+                game.initialize();
+                game.display();
                 // game.start();
                 // game.over();
             } else { println!("{}", return_message); }

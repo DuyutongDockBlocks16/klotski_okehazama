@@ -1,6 +1,6 @@
 use crate::board::{Board, ExitSide};
 use std::collections::HashMap;
-use serde::de::Unexpected::Option;
+use std::option::Option;
 use crate::block::Block;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -45,6 +45,53 @@ impl Game {
         }
     }
 
+    pub fn display(&self) {
+        println!("--- Game State ---");
+        println!("Board Dimensions: Width = {}, Height = {}",
+                 self.board_with_blocks.width,
+                 self.board_with_blocks.height
+        );
+
+        println!("\nExit Information:");
+        println!("Exit Direction: {:?}", self.exit.exit_direction);
+        println!("Adjacent Grids to Exit:");
+        for position in &self.exit.adjacent_grid {
+            println!("  - Position: ({}, {})", position.x, position.y);
+        }
+
+        println!("\nBlocks In Game:");
+        for block in &self.blocks_in_game {
+            println!(
+                "Block ID: {}, English Name: {}, Japanese Name: {}, Position: ({}, {}), Width: {}, Height: {}, Can Escape: {}",
+                block.block_id,
+                block.block_english_name,
+                block.block_japanese_name,
+                block.current_location.x,
+                block.current_location.y,
+                block.width,
+                block.height,
+                block.can_escape
+            );
+            println!(
+                "Movement Status: Up = {}, Down = {}, Left = {}, Right = {}",
+                block.can_move_up, block.can_move_down, block.can_move_left, block.can_move_right
+            );
+        }
+
+        println!("\nGrid State:");
+        for (y, row) in self.grid.iter().enumerate() {
+            for (x, cell) in row.iter().enumerate() {
+                match cell {
+                    Some(block) => print!("B{} ", block.block_id),
+                    None => print!(".  "),
+                }
+            }
+            println!("  (Row {})", y);
+        }
+
+        println!("--- End of Game State ---");
+    }
+
     pub fn authorize_game_blocks_amount(&self) -> bool{
         if self.board_with_blocks.blocks.is_empty() {
             return false;
@@ -86,6 +133,20 @@ impl Game {
                 // println!("{:?}",self.board_with_blocks.height);
                 return_message.push_str(
                     &format!("Block name: {} initial location exceeds the top border;\n", block.block_english_name)
+                );
+            }
+
+            if block.initial_location.0 + block.width -1 > self.board_with_blocks.width {
+                authorization_passed_flag = false;
+                return_message.push_str(
+                    &format!("Block name: {} initial location exceeds the right border;\n", block.block_english_name)
+                );
+            }
+
+            if block.initial_location.1 - block.height - 1 < 0 {
+                authorization_passed_flag = false;
+                return_message.push_str(
+                    &format!("Block name: {} initial location exceeds the bottom border;\n", block.block_english_name)
                 );
             }
 
@@ -140,7 +201,7 @@ impl Game {
     }
 
     fn is_reach_the_top_bounds(&self, position: Position) -> bool {
-        return position.y == self.board_with_blocks.height-1;
+        return position.y == (self.board_with_blocks.height-1) as isize;
     }
 
     fn is_reach_the_bottom_bounds(&self, position: Position) -> bool {
@@ -148,7 +209,7 @@ impl Game {
     }
 
     fn is_reach_the_right_bounds(&self, position: Position) -> bool {
-        return position.x == self.board_with_blocks.width-1;
+        return position.x == (self.board_with_blocks.width-1) as isize;
     }
 
     fn is_reach_the_left_bounds(&self, position: Position) -> bool {
@@ -156,24 +217,24 @@ impl Game {
     }
 
     fn is_top_position_empty(&self, position: Position) -> bool {
-        self.grid[position.y + 1][position.x].is_none()
+        self.grid[ (position.y + 1) as usize ][ position.x as usize ].is_none()
     }
 
     fn is_bottom_position_empty(&self, position: Position) -> bool {
-        self.grid[position.y - 1][position.x].is_none()
+        self.grid[ (position.y - 1) as usize ][ position.x as usize ].is_none()
     }
 
     fn is_right_position_empty(&self, position: Position) -> bool {
-        self.grid[position.y][position.x + 1].is_none()
+        self.grid[ position.y as usize ][ (position.x + 1) as usize ].is_none()
     }
 
     fn is_left_position_empty(&self, position: Position) -> bool {
-        self.grid[position.y][position.x - 1].is_none()
+        self.grid[ position.y as usize ][ (position.x - 1) as usize ].is_none()
     }
 
     fn can_move_up(&self, position: Position, can_escape_flag: bool) -> bool {
         if self.exit.exit_direction == ExitSide::Top {
-            self.exit.adjacent_grid.contains(&position)
+            return self.exit.adjacent_grid.contains(&position);
         }
 
         !self.is_reach_the_top_bounds(position) && self.is_top_position_empty(position)
@@ -181,7 +242,7 @@ impl Game {
 
     fn can_move_down(&self, position: Position, can_escape_flag: bool) -> bool {
         if self.exit.exit_direction == ExitSide::Bottom {
-            self.exit.adjacent_grid.contains(&position)
+            return self.exit.adjacent_grid.contains(&position);
         }
 
         !self.is_reach_the_bottom_bounds(position) && self.is_bottom_position_empty(position)
@@ -189,7 +250,7 @@ impl Game {
 
     fn can_move_left(&self, position: Position, can_escape_flag: bool) -> bool {
         if self.exit.exit_direction == ExitSide::Left {
-            self.exit.adjacent_grid.contains(&position)
+            return self.exit.adjacent_grid.contains(&position);
         }
 
         !self.is_reach_the_left_bounds(position) && self.is_left_position_empty(position)
@@ -197,7 +258,7 @@ impl Game {
 
     fn can_right_right(&self, position: Position, can_escape_flag: bool) -> bool {
         if self.exit.exit_direction == ExitSide::Right {
-            self.exit.adjacent_grid.contains(&position)
+            return self.exit.adjacent_grid.contains(&position);
         }
 
         !self.is_reach_the_right_bounds(position) && self.is_right_position_empty(position)
@@ -224,13 +285,13 @@ impl Game {
         });
 
         // initialize grid with empty
-        let grid = vec![
+        let mut grid = vec![
             vec![None; self.board_with_blocks.width as usize];
             self.board_with_blocks.height as usize
         ]; // 初始化为空
 
         // initialize exit
-        self.exit.exit_direction = *self.board_with_blocks.exit_position.side;
+        self.exit.exit_direction = self.board_with_blocks.exit_position.side;
         if self.exit.exit_direction == ExitSide::Top {
             for i in 0..self.board_with_blocks.exit_position.length {
                 self.exit.adjacent_grid.push(
@@ -271,27 +332,64 @@ impl Game {
         self.blocks_in_game.iter().for_each(|block|{
             for i in 0..block.width {
                 for j in 0..block.height {
-                    grid[block.current_location.x + i][block.current_location.y + j] = Some(block);
+                    grid[ ( block.current_location.x + i as isize ) as usize ][ ( block.current_location.y + j as isize ) as usize ] = Some(block);
                 }
             }
         });
 
+        let blocks_in_game = &mut self.blocks_in_game;
 
-        self.blocks_in_game.iter().for_each(|block|{
+        // let can_move_up_fn = |position, can_escape_flag| self.can_move_up(position, can_escape_flag);
+        // initialize ability of move
+        blocks_in_game.iter_mut().for_each(|block|{
 
             let can_escape_flag: bool = block.can_escape;
-
-            // todo 思考一下这里怎么写
 
             let mut can_move_up_flag:bool = true;
 
             for i in 0..block.width {
-                let position = Position{ x: block.current_location.x + i, y: block.current_location.y };
+                let position = Position{ x: block.current_location.x + i as isize, y: block.current_location.y };
                 if !self.can_move_up(position, can_escape_flag) {
                     can_move_up_flag = false;
                     break
                 }
             }
+
+            block.can_move_up = can_move_up_flag;
+
+            let mut can_move_down_flag:bool = true;
+
+            for i in 0..block.width {
+                let position = Position{ x: block.current_location.x + i as isize , y: block.current_location.y - block.height as isize - 1 };
+                if !self.can_move_down(position, can_escape_flag) {
+                    can_move_down_flag = false;
+                    break
+                }
+            }
+            block.can_move_down = can_move_down_flag;
+
+            let mut can_move_left_flag:bool = true;
+
+            for i in 0..block.height {
+                let position = Position{ x: block.current_location.x , y: block.current_location.y - i as isize };
+                if !self.can_move_left(position, can_escape_flag) {
+                    can_move_left_flag = false;
+                    break
+                }
+            }
+            block.can_move_left = can_move_left_flag;
+
+            let mut can_move_right_flag:bool = true;
+
+            for i in 0..block.width {
+                let position = Position{ x: block.current_location.x + block.width as isize - i as isize, y: block.current_location.y - i as isize };
+                if !self.can_move_left(position, can_escape_flag) {
+                    can_move_right_flag = false;
+                    break
+                }
+            }
+            block.can_move_right = can_move_right_flag;
+
         })
 
 
