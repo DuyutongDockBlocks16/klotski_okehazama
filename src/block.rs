@@ -34,7 +34,6 @@ impl Block {
         }
     }
 
-    // 其他方法也可以写在这里
     pub fn display(&self) {
         println!(
             "Block Details:\n\

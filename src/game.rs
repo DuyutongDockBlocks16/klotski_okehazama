@@ -5,8 +5,13 @@ use crate::block::Block;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Position {
-    pub x: u8,
-    pub y: u8,
+    pub x: isize,
+    pub y: isize,
+}
+
+pub struct Exit{
+    adjacent_grid: Vec<Position>,
+    exit_direction: ExitSide,
 }
 
 pub struct BlockInGame {
@@ -26,7 +31,8 @@ pub struct BlockInGame {
 pub struct Game {
     pub board_with_blocks: Board,
     pub blocks_in_game : Vec<BlockInGame>,
-    pub grid: Vec<Vec<Option<BlockInGame>>>
+    pub grid: Vec<Vec<Option<BlockInGame>>>,
+    pub exit: Exit,
 }
 
 impl Game {
@@ -34,7 +40,8 @@ impl Game {
         Game {
             board_with_blocks,
             blocks_in_game: vec![],
-            grid: vec![]
+            grid: vec![],
+            exit: Exit { adjacent_grid: vec![], exit_direction: ExitSide::Bottom },
         }
     }
 
@@ -164,19 +171,35 @@ impl Game {
         self.grid[position.y][position.x - 1].is_none()
     }
 
-    fn can_move_up(&self, position: Position) -> bool {
+    fn can_move_up(&self, position: Position, can_escape_flag: bool) -> bool {
+        if self.exit.exit_direction == ExitSide::Top {
+            self.exit.adjacent_grid.contains(&position)
+        }
+
         !self.is_reach_the_top_bounds(position) && self.is_top_position_empty(position)
     }
 
-    fn can_move_down(&self, position: Position) -> bool {
+    fn can_move_down(&self, position: Position, can_escape_flag: bool) -> bool {
+        if self.exit.exit_direction == ExitSide::Bottom {
+            self.exit.adjacent_grid.contains(&position)
+        }
+
         !self.is_reach_the_bottom_bounds(position) && self.is_bottom_position_empty(position)
     }
 
-    fn can_move_left(&self, position: Position) -> bool {
+    fn can_move_left(&self, position: Position, can_escape_flag: bool) -> bool {
+        if self.exit.exit_direction == ExitSide::Left {
+            self.exit.adjacent_grid.contains(&position)
+        }
+
         !self.is_reach_the_left_bounds(position) && self.is_left_position_empty(position)
     }
 
-    fn can_right_left(&self, position: Position) -> bool {
+    fn can_right_right(&self, position: Position, can_escape_flag: bool) -> bool {
+        if self.exit.exit_direction == ExitSide::Right {
+            self.exit.adjacent_grid.contains(&position)
+        }
+
         !self.is_reach_the_right_bounds(position) && self.is_right_position_empty(position)
     }
 
@@ -190,7 +213,7 @@ impl Game {
                     block_japanese_name: block.block_japanese_name.to_string(),
                     width: block.width,
                     height: block.height,
-                    current_location: Position { x: block.initial_location.0, y: block.initial_location.1 },
+                    current_location: Position { x: block.initial_location.0 as isize, y: block.initial_location.1 as isize },
                     can_move_up: false,
                     can_move_down: false,
                     can_move_left: false,
@@ -206,6 +229,44 @@ impl Game {
             self.board_with_blocks.height as usize
         ]; // 初始化为空
 
+        // initialize exit
+        self.exit.exit_direction = *self.board_with_blocks.exit_position.side;
+        if self.exit.exit_direction == ExitSide::Top {
+            for i in 0..self.board_with_blocks.exit_position.length {
+                self.exit.adjacent_grid.push(
+                    Position{
+                        x: (0 + self.board_with_blocks.exit_position.distance_to_edge + i) as isize,
+                        y: (self.board_with_blocks.height - 1) as isize }
+                )
+            }
+        } else if self.exit.exit_direction == ExitSide::Bottom {
+            for i in 0..self.board_with_blocks.exit_position.length {
+                self.exit.adjacent_grid.push(
+                    Position{
+                        x: (0 + self.board_with_blocks.exit_position.distance_to_edge + i) as isize,
+                        y: 0 }
+                )
+            }
+        } else if self.exit.exit_direction == ExitSide::Right {
+            for i in 0..self.board_with_blocks.exit_position.length {
+                self.exit.adjacent_grid.push(
+                    Position{
+                        x: (self.board_with_blocks.width - 1) as isize,
+                        y: (0 + self.board_with_blocks.exit_position.distance_to_edge + i) as isize }
+                )
+            }
+            
+        } else if self.exit.exit_direction == ExitSide::Left {
+            for i in 0..self.board_with_blocks.exit_position.length {
+                self.exit.adjacent_grid.push(
+                    Position{
+                        x: 0,
+                        y: (0 + self.board_with_blocks.exit_position.distance_to_edge + i) as isize }
+                )
+            }
+        }
+
+
         // locate blocks to board
         self.blocks_in_game.iter().for_each(|block|{
             for i in 0..block.width {
@@ -215,14 +276,21 @@ impl Game {
             }
         });
 
+
         self.blocks_in_game.iter().for_each(|block|{
+
+            let can_escape_flag: bool = block.can_escape;
 
             // todo 思考一下这里怎么写
 
-            let mut can_move_up:bool = false;
+            let mut can_move_up_flag:bool = true;
 
             for i in 0..block.width {
-                block.current_location
+                let position = Position{ x: block.current_location.x + i, y: block.current_location.y };
+                if !self.can_move_up(position, can_escape_flag) {
+                    can_move_up_flag = false;
+                    break
+                }
             }
         })
 

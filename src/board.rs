@@ -1,6 +1,6 @@
 use crate::block::Block;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Copy)]
 pub enum ExitSide {
     Top,    // 上侧
     Bottom, // 下侧
@@ -11,7 +11,7 @@ pub enum ExitSide {
 #[derive(Debug)]
 pub struct ExitPosition {
     pub side: ExitSide, // 出口方向
-    pub distance_to_edge: u8, // 在左边和右边就是到上边缘的距离，在上侧和下侧就是到左边的距离
+    pub distance_to_edge: u8, // 在左边和右边就是到下边缘的距离，在上侧和下侧就是到左边的距离
     pub length: u8,
 }
 
