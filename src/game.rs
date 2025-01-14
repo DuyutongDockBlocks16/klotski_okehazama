@@ -468,9 +468,8 @@ impl Game {
         }
 
         // load world to get ready for rendering
-        let world = World::new();
+        let mut world = World::new();
         self.world = world;
-
     }
 
     pub fn start(self) -> GameResult {
