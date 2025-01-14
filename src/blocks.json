@@ -17,4 +17,13 @@
     "initial_location": [1, 2],
     "can_escape": false
   }
+  ,{
+    "block_id": 2,
+    "block_english_name": "Mōri Yoshikatsu",
+    "block_japanese_name": "毛利良勝",
+    "width": 1,
+    "height": 1,
+    "initial_location": [3, 4],
+    "can_escape": false
+  }
 ]

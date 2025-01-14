@@ -80,14 +80,15 @@ impl Game {
         }
 
         println!("\nGrid State:");
-        for (y, row) in self.grid.iter().enumerate() {
+        // 从最后一行开始向上迭代
+        for (y, row) in self.grid.iter().enumerate().rev() {
             for (x, cell) in row.iter().enumerate() {
                 match cell {
                     Some(block) => print!("B{} ", block.block_id),
                     None => print!(".  "),
                 }
             }
-            println!("  (Row {})", y);
+            println!("  (Row {})", y); // 保持 Row 的索引对应视觉上的行号
         }
 
         println!("--- End of Game State ---");
