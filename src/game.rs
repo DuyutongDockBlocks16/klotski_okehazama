@@ -1,7 +1,17 @@
+use std::ascii::escape_default;
 use crate::board::{Board, ExitSide};
 use std::collections::HashMap;
 use std::option::Option;
 use crate::block::Block;
+use ggez::{
+    conf, event,
+    graphics::{self, DrawParam, Image},
+    Context, GameResult,
+};
+use glam::Vec2;
+use hecs::{Entity, World};
+
+use std::path;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Position {
@@ -63,7 +73,7 @@ impl Game {
         println!("\nBlocks In Game:");
         for block in &self.blocks_in_game {
             println!(
-                "Block ID: {}, English Name: {}, Japanese Name: {}, Position: ({}, {}), Width: {}, Height: {}, Can Escape: {}",
+                "Block ID: {}, English Name: {}, Japanese Name: {}, Position: ({}, {}), Width: {}, Height: {}, Can Escape: {}, Can Move Up: {}, Can Move Down: {}, Can Move Left: {}, Can Move Right: {}",
                 block.block_id,
                 block.block_english_name,
                 block.block_japanese_name,
@@ -71,8 +81,13 @@ impl Game {
                 block.current_location.y,
                 block.width,
                 block.height,
-                block.can_escape
+                block.can_escape,
+                block.can_move_up,
+                block.can_move_down,
+                block.can_move_left,
+                block.can_move_right
             );
+
             println!(
                 "Movement Status: Up = {}, Down = {}, Left = {}, Right = {}",
                 block.can_move_up, block.can_move_down, block.can_move_left, block.can_move_right
@@ -203,7 +218,7 @@ impl Game {
     }
 
     fn is_reach_the_top_bounds(&self, position: Position) -> bool {
-        return position.y == (self.board_with_blocks.height-1) as isize;
+        return position.y == (self.board_with_blocks.height - 1) as isize;
     }
 
     fn is_reach_the_bottom_bounds(&self, position: Position) -> bool {
@@ -211,7 +226,7 @@ impl Game {
     }
 
     fn is_reach_the_right_bounds(&self, position: Position) -> bool {
-        return position.x == (self.board_with_blocks.width-1) as isize;
+        return position.x == (self.board_with_blocks.width - 1) as isize;
     }
 
     fn is_reach_the_left_bounds(&self, position: Position) -> bool {
@@ -235,7 +250,7 @@ impl Game {
     }
 
     fn can_move_up(&self, position: Position, can_escape_flag: bool) -> bool {
-        if self.exit.exit_direction == ExitSide::Top {
+        if can_escape_flag && self.exit.exit_direction == ExitSide::Top {
             return self.exit.adjacent_grid.contains(&position);
         }
 
@@ -243,7 +258,7 @@ impl Game {
     }
 
     fn can_move_down(&self, position: Position, can_escape_flag: bool) -> bool {
-        if self.exit.exit_direction == ExitSide::Bottom {
+        if can_escape_flag && self.exit.exit_direction == ExitSide::Bottom {
             return self.exit.adjacent_grid.contains(&position);
         }
 
@@ -251,15 +266,15 @@ impl Game {
     }
 
     fn can_move_left(&self, position: Position, can_escape_flag: bool) -> bool {
-        if self.exit.exit_direction == ExitSide::Left {
+        if can_escape_flag && self.exit.exit_direction == ExitSide::Left {
             return self.exit.adjacent_grid.contains(&position);
         }
 
         !self.is_reach_the_left_bounds(position) && self.is_left_position_empty(position)
     }
 
-    fn can_right_right(&self, position: Position, can_escape_flag: bool) -> bool {
-        if self.exit.exit_direction == ExitSide::Right {
+    fn can_move_right(&self, position: Position, can_escape_flag: bool) -> bool {
+        if can_escape_flag && self.exit.exit_direction == ExitSide::Right {
             return self.exit.adjacent_grid.contains(&position);
         }
 
@@ -362,7 +377,7 @@ impl Game {
             let mut can_move_down_flag:bool = true;
 
             for i in 0..block.width {
-                let position = Position{ x: block.current_location.x + i as isize , y: block.current_location.y - block.height as isize - 1 };
+                let position = Position{ x: block.current_location.x + i as isize , y: block.current_location.y - block.height as isize + 1};
                 if !self.can_move_down(position, can_escape_flag) {
                     can_move_down_flag = false;
                     break
@@ -381,14 +396,14 @@ impl Game {
 
             let mut can_move_right_flag:bool = true;
 
-            for i in 0..block.width {
-                let position = Position{ x: block.current_location.x + block.width as isize - i as isize, y: block.current_location.y - i as isize };
-                if !self.can_move_left(position, can_escape_flag) {
+            for i in 0..block.height {
+                let position = Position{ x: block.current_location.x + block.width as isize - 1, y: block.current_location.y - i as isize };
+                if !self.can_move_right(position, can_escape_flag) {
                     can_move_right_flag = false;
                     break
                 }
             }
-            move_ability_of_blocks.push((can_move_up_flag, can_move_down_flag, can_move_left_flag, can_move_up_flag))
+            move_ability_of_blocks.push((can_move_up_flag, can_move_down_flag, can_move_left_flag, can_move_right_flag))
         });
 
         for (i, block) in self.blocks_in_game.iter_mut().enumerate(){
