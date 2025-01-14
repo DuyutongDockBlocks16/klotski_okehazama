@@ -50,7 +50,8 @@ fn main() -> std::io::Result<()> {
             if authorization_passed_flag {
                 game.initialize();
                 game.display();
-                // game.start();
+                game.start().expect("Game Internal Error");
+
                 // game.over();
             } else { println!("{}", return_message); }
         } else { println!("The amount of blocks should more than 0!") }

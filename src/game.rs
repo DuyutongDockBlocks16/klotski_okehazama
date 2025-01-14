@@ -10,6 +10,7 @@ use ggez::{
 };
 use glam::Vec2;
 use hecs::{Entity, World};
+const TILE_WIDTH: f32 = 32.0;
 
 use std::path;
 
@@ -23,6 +24,11 @@ pub struct Exit{
     adjacent_grid: Vec<Position>,
     exit_direction: ExitSide,
 }
+
+pub struct Renderable {
+    path: String,
+}
+
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BlockInGame {
@@ -44,7 +50,54 @@ pub struct Game {
     pub blocks_in_game : Vec<BlockInGame>,
     pub grid: Vec<Vec<Option<BlockInGame>>>,
     pub exit: Exit,
+    pub world: World
 }
+
+
+
+fn run_rendering(world: &World, context: &mut Context) {
+    // Clearing the screen (this gives us the background colour)
+    let mut canvas =
+        graphics::Canvas::from_frame(context, graphics::Color::from([0.95, 0.95, 0.95, 1.0]));
+
+    // Get all the renderables with their positions and sort by the position z
+    // This will allow us to have entities layered visually.
+    let mut query = world.query::<(&Position, &Renderable)>();
+    let mut rendering_data: Vec<(Entity, (&Position, &Renderable))> = query.into_iter().collect();
+
+    // Iterate through all pairs of positions & renderables, load the image
+    // and draw it at the specified position.
+    for (_, (position, renderable)) in rendering_data.iter() {
+        // Load the image
+        let image = Image::from_path(context, renderable.path.clone()).unwrap();
+        let x = position.x as f32 * TILE_WIDTH;
+        let y = position.y as f32 * TILE_WIDTH;
+
+        // draw
+        let draw_params = DrawParam::new().dest(Vec2::new(x, y));
+        canvas.draw(&image, draw_params);
+    }
+
+    // Finally, present the canvas, this will actually display everything
+    // on the screen.
+    canvas.finish(context).expect("expected to present");
+}
+
+impl event::EventHandler<ggez::GameError> for Game {
+    fn update(&mut self, _context: &mut Context) -> GameResult {
+        Ok(())
+    }
+
+    fn draw(&mut self, context: &mut Context) -> GameResult {
+        // Render game entities
+        {
+            run_rendering(&self.world, context);
+        }
+
+        Ok(())
+    }
+}
+
 
 impl Game {
     pub fn new(board_with_blocks: Board) -> Self {
@@ -53,6 +106,7 @@ impl Game {
             blocks_in_game: vec![],
             grid: vec![],
             exit: Exit { adjacent_grid: vec![], exit_direction: ExitSide::Bottom },
+            world: Default::default()
         }
     }
 
@@ -413,6 +467,22 @@ impl Game {
             block.can_move_right = move_ability_of_blocks[i].3;
         }
 
+        // load world to get ready for rendering
+        let world = World::new();
+        self.world = world;
+
+    }
+
+    pub fn start(self) -> GameResult {
+
+        let context_builder = ggez::ContextBuilder::new("klotski_okehazama", "Yutong Du")
+            .window_setup(conf::WindowSetup::default().title("Klotski Okehazama!"))
+            .window_mode(conf::WindowMode::default().dimensions(800.0, 600.0))
+            .add_resource_path(path::PathBuf::from("./resources"));
+
+        let (context, event_loop) = context_builder.build()?;
+
+        event::run(context, event_loop, self);
 
     }
 
