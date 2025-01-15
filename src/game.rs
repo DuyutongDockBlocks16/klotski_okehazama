@@ -83,6 +83,82 @@ fn run_rendering(world: &World, context: &mut Context) {
     canvas.finish(context).expect("expected to present");
 }
 
+pub fn initialize_level(board_with_blocks: &Board, world: &mut World) {
+    let mut map = vec![vec!['W'; board_with_blocks.width as usize]; board_with_blocks.height as usize];
+
+    // 处理出口
+    match board_with_blocks.exit_position.side {
+        ExitSide::Top => {
+            let start = board_with_blocks.exit_position.distance_to_edge as usize;
+            let length = board_with_blocks.exit_position.length as usize;
+            for i in start..(start + length).min(board_with_blocks.width as usize) {
+                map[0][i] = 'E';
+            }
+        }
+        ExitSide::Bottom => {
+            let start = board_with_blocks.exit_position.distance_to_edge as usize;
+            let length = board_with_blocks.exit_position.length as usize;
+            for i in start..(start + length).min(board_with_blocks.width as usize) {
+                map[(board_with_blocks.height - 1) as usize][i] = 'E';
+            }
+        }
+        ExitSide::Left => {
+            let start = board_with_blocks.exit_position.distance_to_edge as usize;
+            let length = board_with_blocks.exit_position.length as usize;
+            for i in start..(start + length).min(board_with_blocks.height as usize) {
+                map[i][0] = 'E';
+            }
+        }
+        ExitSide::Right => {
+            let start = board_with_blocks.exit_position.distance_to_edge as usize;
+            let length = board_with_blocks.exit_position.length as usize;
+            for i in start..(start + length).min(board_with_blocks.height as usize) {
+                map[i][(board_with_blocks.width - 1) as usize] = 'E';
+            }
+        }
+    }
+
+    // 放置每个 Block 的初始位置
+    for block in &board_with_blocks.blocks {
+        let (x, y) = block.initial_location;
+        map[y as usize][x as usize] = block.block_id.to_string().chars().next().unwrap_or('0');
+    }
+
+    // 将二维数组转换为字符串
+    let map_string = map
+        .iter()
+        .map(|row| row.iter().collect::<String>())
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    // // 生成 Block 的宽高列表
+    // let block_dimensions = board_with_blocks
+    //     .blocks
+    //     .iter()
+    //     .map(|block| (block.block_english_name.clone(), block.width, block.height))
+    //     .collect();
+    //
+    // (map_string, block_dimensions)
+
+    println!("{}", map_string);
+
+
+
+    //     const MAP: &str = "
+    // N N W W W W W W
+    // W W W . . . . W
+    // W . . . B . . W
+    // W . . . . . . W
+    // W . P . . . . W
+    // W . . . . . . W
+    // W . . S . . . W
+    // W . . . . . . W
+    // W W W W W W W W
+    // ";
+
+    // load_map(world, MAP.to_string());
+}
+
 impl event::EventHandler<ggez::GameError> for Game {
     fn update(&mut self, _context: &mut Context) -> GameResult {
         Ok(())
@@ -469,8 +545,11 @@ impl Game {
 
         // load world to get ready for rendering
         let mut world = World::new();
+        initialize_level(&self.board_with_blocks, &mut world);
         self.world = world;
     }
+
+
 
     pub fn start(self) -> GameResult {
 
