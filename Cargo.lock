@@ -1175,6 +1175,7 @@ dependencies = [
  "glam",
  "hecs",
  "log",
+ "regex",
  "serde",
  "serde_json",
 ]

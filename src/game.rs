@@ -11,13 +11,39 @@ use ggez::{
 use glam::Vec2;
 use hecs::{Entity, World};
 const TILE_WIDTH: f32 = 32.0;
+use regex::Regex;
 
 use std::path;
+
+pub struct Wall {}
+
+// ANCHOR: components_movement
+pub struct Movable;
+
+pub struct Immovable;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Position {
     pub x: isize,
     pub y: isize,
+}
+
+#[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
+pub struct PositionDuringGame {
+    x: u8,
+    y: u8,
+    z: u8,
+}
+
+#[derive(Debug)]
+pub struct CollisionVolume {
+    pub occupied_cells: Vec<PositionDuringGame>,
+}
+
+#[derive(Debug)]
+pub struct Size {
+    pub width: u8,
+    pub height: u8,
 }
 
 pub struct Exit{
@@ -62,8 +88,9 @@ fn run_rendering(world: &World, context: &mut Context) {
 
     // Get all the renderables with their positions and sort by the position z
     // This will allow us to have entities layered visually.
-    let mut query = world.query::<(&Position, &Renderable)>();
-    let mut rendering_data: Vec<(Entity, (&Position, &Renderable))> = query.into_iter().collect();
+    let mut query = world.query::<(&PositionDuringGame, &Renderable)>();
+    let mut rendering_data: Vec<(Entity, (&PositionDuringGame, &Renderable))> = query.into_iter().collect();
+    rendering_data.sort_by_key(|&k| k.1 .0.z);
 
     // Iterate through all pairs of positions & renderables, load the image
     // and draw it at the specified position.
@@ -84,36 +111,55 @@ fn run_rendering(world: &World, context: &mut Context) {
 }
 
 pub fn initialize_level(board_with_blocks: &Board, world: &mut World) {
-    let mut map = vec![vec!['W'; board_with_blocks.width as usize]; board_with_blocks.height as usize];
+    let mut map = vec!
+    [
+        vec!['.'; board_with_blocks.width as usize + 2];
+        board_with_blocks.height as usize + 2
+    ];
+
+    let map_len = map.len();
+
+    for x in 0..map[0].len() {
+        map[0][x] = 'W'; // 顶部
+        map[map_len - 1][x] = 'W'; // 底部
+    }
+
+    let map_0_len = map[0].len();
+
+// 填充左侧和右侧的墙壁
+    for y in 0..map.len() {
+        map[y][0] = 'W'; // 左侧
+        map[y][map_0_len - 1] = 'W'; // 右侧
+    }
 
     // 处理出口
     match board_with_blocks.exit_position.side {
-        ExitSide::Top => {
-            let start = board_with_blocks.exit_position.distance_to_edge as usize;
-            let length = board_with_blocks.exit_position.length as usize;
-            for i in start..(start + length).min(board_with_blocks.width as usize) {
-                map[0][i] = 'E';
-            }
-        }
         ExitSide::Bottom => {
             let start = board_with_blocks.exit_position.distance_to_edge as usize;
             let length = board_with_blocks.exit_position.length as usize;
             for i in start..(start + length).min(board_with_blocks.width as usize) {
-                map[(board_with_blocks.height - 1) as usize][i] = 'E';
+                map[0][i + 1] = 'E';
+            }
+        }
+        ExitSide::Top => {
+            let start = board_with_blocks.exit_position.distance_to_edge as usize;
+            let length = board_with_blocks.exit_position.length as usize;
+            for i in start..(start + length).min(board_with_blocks.width as usize) {
+                map[(board_with_blocks.height - 1 + 2) as usize][ i + 1 ] = 'E';
             }
         }
         ExitSide::Left => {
             let start = board_with_blocks.exit_position.distance_to_edge as usize;
             let length = board_with_blocks.exit_position.length as usize;
             for i in start..(start + length).min(board_with_blocks.height as usize) {
-                map[i][0] = 'E';
+                map[ map_len - i - 1 ][0] = 'E';
             }
         }
         ExitSide::Right => {
             let start = board_with_blocks.exit_position.distance_to_edge as usize;
             let length = board_with_blocks.exit_position.length as usize;
             for i in start..(start + length).min(board_with_blocks.height as usize) {
-                map[i][(board_with_blocks.width - 1) as usize] = 'E';
+                map[ map_len - i - 1 ][(board_with_blocks.width - 1 + 2 ) as usize] = 'E';
             }
         }
     }
@@ -121,42 +167,105 @@ pub fn initialize_level(board_with_blocks: &Board, world: &mut World) {
     // 放置每个 Block 的初始位置
     for block in &board_with_blocks.blocks {
         let (x, y) = block.initial_location;
-        map[y as usize][x as usize] = block.block_id.to_string().chars().next().unwrap_or('0');
+        map[ y as usize+1 ][x as usize+1] =
+            block.block_id.to_string().chars().next().unwrap_or('?');
     }
 
     // 将二维数组转换为字符串
     let map_string = map
         .iter()
-        .map(|row| row.iter().collect::<String>())
+        .rev() // 反转行顺序
+        .map(|row| row.iter().map(|&c| c.to_string()).collect::<Vec<_>>().join(" ")) // 每行字符用空格分隔
         .collect::<Vec<_>>()
-        .join("\n");
-
-    // // 生成 Block 的宽高列表
-    // let block_dimensions = board_with_blocks
-    //     .blocks
-    //     .iter()
-    //     .map(|block| (block.block_english_name.clone(), block.width, block.height))
-    //     .collect();
-    //
-    // (map_string, block_dimensions)
+        .join("\n"); // 行间用换行符分隔
 
     println!("{}", map_string);
 
+    // 生成 Block 的宽高列表
+    let block_dimensions: Vec<(u8, u8, u8)> = board_with_blocks
+        .blocks
+        .iter()
+        .map(|block| (block.block_id.clone(), block.width, block.height))
+        .collect();
 
+    // 转换为 HashMap
+    let block_dict: HashMap<String, (u8, u8)> = block_dimensions
+        .into_iter()
+        .map(|(block_id, width, height)| (block_id.to_string(), (width, height)))
+        .collect();
 
-    //     const MAP: &str = "
-    // N N W W W W W W
-    // W W W . . . . W
-    // W . . . B . . W
-    // W . . . . . . W
-    // W . P . . . . W
-    // W . . . . . . W
-    // W . . S . . . W
-    // W . . . . . . W
-    // W W W W W W W W
-    // ";
+    // 使用调试模式打印
+    println!("{:?}", block_dict);
+    
+    load_map(world, map_string, block_dict);
+}
 
-    // load_map(world, MAP.to_string());
+pub fn create_floor(world: &mut World, position: PositionDuringGame) -> Entity {
+    world.spawn((
+        PositionDuringGame { z: 5, ..position },
+        Renderable {
+            path: "/images/floor.png".to_string(),
+        },
+    ))
+}
+
+pub fn create_numeric_entity(world: &mut World, position: PositionDuringGame) -> Entity {
+    world.spawn((
+        PositionDuringGame { z: 5, ..position },
+        Renderable {
+            path: "/images/mountain.png".to_string(),
+        },
+    ))
+}
+
+pub fn create_wall(world: &mut World, position: PositionDuringGame) -> Entity {
+    world.spawn((
+        PositionDuringGame { z: 10, ..position },
+        Renderable {
+            path: "/images/mountain.png".to_string(),
+        },
+        Wall {},
+        Immovable {},
+    ))
+}
+
+pub fn load_map(world: &mut World, map_string: String, block_dict: HashMap<String, (u8, u8)> ) {
+    // read all lines
+    let rows: Vec<&str> = map_string.trim().split('\n').map(|x| x.trim()).collect();
+
+    let digit_regex = Regex::new(r"^[0-9]$").unwrap();
+
+    for (y, row) in rows.iter().enumerate() {
+        let columns: Vec<&str> = row.split(' ').collect();
+
+        for (x, column) in columns.iter().enumerate() {
+            // Create the position at which to create something on the map
+            let position = PositionDuringGame {
+                x: x as u8,
+                y: y as u8,
+                z: 0, // we will get the z from the factory functions
+            };
+
+            // Figure out what object we should create
+            match *column {
+                "." => {
+                    create_floor(world, position);
+                }
+                "W" => {
+                    create_floor(world, position);
+                    create_wall(world, position);
+                }
+                "E" => {
+                    create_floor(world, position);
+                }
+                c if digit_regex.is_match(c) => {
+                    create_floor(world, position);
+                    create_numeric_entity(world, position);
+                }
+                c => panic!("unrecognized map item {}", c),
+            }
+        }
+    }
 }
 
 impl event::EventHandler<ggez::GameError> for Game {
@@ -546,6 +655,7 @@ impl Game {
         // load world to get ready for rendering
         let mut world = World::new();
         initialize_level(&self.board_with_blocks, &mut world);
+
         self.world = world;
     }
 
