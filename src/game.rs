@@ -6,6 +6,8 @@ use crate::block::Block;
 use ggez::{
     conf, event,
     graphics::{self, DrawParam, Image},
+    input::keyboard::KeyCode,
+    input::mouse::MouseButton,
     Context, GameResult,
 };
 use glam::Vec2;
@@ -14,10 +16,14 @@ use regex::Regex;
 use std::path;
 
 const TILE_WIDTH: f32 = 100.0;
+static mut MAP_WIDTH: u8 = 0;
+static mut MAP_HEIGHT: u8 = 0;
 
-pub struct Wall {}
+pub struct WallDuringGame {}
 
 pub struct BlockDuringGame {}
+
+pub struct ExitDuringGame {}
 
 // ANCHOR: components_movement
 pub struct Movable;
@@ -113,12 +119,103 @@ fn run_rendering(world: &World, context: &mut Context) {
     canvas.finish(context).expect("expected to present");
 }
 
-pub fn initialize_level(board_with_blocks: &Board, world: &mut World) {
+unsafe fn run_input(world: &World, context: &mut Context) {
+    let mut to_move: Vec<(Entity, KeyCode)> = Vec::new();
+
+    // get all the movables and immovables
+    let mov: HashMap<(u8, u8), Entity> = world
+        .query::<(&PositionDuringGame, &Movable)>()
+        .iter()
+        .map(|t| ((t.1 .0.x, t.1 .0.y), t.0))
+        .collect::<HashMap<_, _>>();
+    let immov: HashMap<(u8, u8), Entity> = world
+        .query::<(&PositionDuringGame, &Immovable)>()
+        .iter()
+        .map(|t| ((t.1 .0.x, t.1 .0.y), t.0))
+        .collect::<HashMap<_, _>>();
+
+    for (_, (position, _player)) in world.query::<(&mut PositionDuringGame, &BlockDuringGame)>().iter() {
+        if context.keyboard.is_key_repeated() {
+            continue;
+        }
+
+        // Now iterate through current position to the end of the map
+        // on the correct axis and check what needs to move.
+        let key = if context.keyboard.is_key_pressed(KeyCode::Up) {
+            KeyCode::Up
+        } else if context.keyboard.is_key_pressed(KeyCode::Down) {
+            KeyCode::Down
+        } else if context.keyboard.is_key_pressed(KeyCode::Left) {
+            KeyCode::Left
+        } else if context.keyboard.is_key_pressed(KeyCode::Right) {
+            KeyCode::Right
+        } else {
+            continue;
+        };
+
+        let (start, end, is_x) = match key {
+            KeyCode::Up => (position.y, 0, false),
+            KeyCode::Down => (position.y, MAP_HEIGHT - 1, false),
+            KeyCode::Left => (position.x, 0, true),
+            KeyCode::Right => (position.x, MAP_WIDTH - 1, true),
+            _ => continue,
+        };
+
+        let range = if start < end {
+            (start..=end).collect::<Vec<_>>()
+        } else {
+            (end..=start).rev().collect::<Vec<_>>()
+        };
+
+        for x_or_y in range {
+            let pos = if is_x {
+                (x_or_y, position.y)
+            } else {
+                (position.x, x_or_y)
+            };
+
+            // find a movable
+            // if it exists, we try to move it and continue
+            // if it doesn't exist, we continue and try to find an immovable instead
+            match mov.get(&pos) {
+                Some(entity) => to_move.push((*entity, key)),
+                None => {
+                    // find an immovable
+                    // if it exists, we need to stop and not move anything
+                    // if it doesn't exist, we stop because we found a gap
+                    match immov.get(&pos) {
+                        Some(_id) => to_move.clear(),
+                        None => break,
+                    }
+                }
+            }
+        }
+    }
+
+    // Now actually move what needs to be moved
+    for (entity, key) in to_move {
+        let mut position = world.get::<&mut Position>(entity).unwrap();
+
+        match key {
+            KeyCode::Up => position.y -= 1,
+            KeyCode::Down => position.y += 1,
+            KeyCode::Left => position.x -= 1,
+            KeyCode::Right => position.x += 1,
+            _ => (),
+        }
+    }
+}
+
+pub unsafe fn initialize_level(board_with_blocks: &Board, world: &mut World) {
+
     let mut map = vec!
     [
         vec!['.'; board_with_blocks.width as usize + 2];
         board_with_blocks.height as usize + 2
     ];
+
+    MAP_WIDTH = board_with_blocks.width + 2;
+    MAP_HEIGHT = board_with_blocks.height + 2;
 
     let map_len = map.len();
 
@@ -214,7 +311,7 @@ pub fn create_floor(world: &mut World, position: PositionDuringGame) -> Entity {
 
 pub fn create_exit(world: &mut World, position: PositionDuringGame) -> Entity {
     world.spawn((
-        PositionDuringGame { z: 5, ..position },
+        PositionDuringGame { z: 6, ..position },
         Renderable {
             path: "/images/exit.png".to_string(),
         },
@@ -229,10 +326,12 @@ pub fn create_block(world: &mut World, position: PositionDuringGame, c: &str, si
     };
 
     world.spawn((
-        PositionDuringGame { z: 6, ..position },
+        PositionDuringGame { z: 10, ..position },
         Renderable {
             path: "/images/".to_string() + c + ".png",
         },
+        BlockDuringGame {},
+        Movable {},
     ))
 }
 
@@ -242,7 +341,7 @@ pub fn create_wall(world: &mut World, position: PositionDuringGame) -> Entity {
         Renderable {
             path: "/images/mountain.png".to_string(),
         },
-        Wall {},
+        WallDuringGame {},
         Immovable {},
     ))
 }
@@ -288,7 +387,12 @@ pub fn load_map(world: &mut World, map_string: String, block_dict: HashMap<Strin
 }
 
 impl event::EventHandler<ggez::GameError> for Game {
-    fn update(&mut self, _context: &mut Context) -> GameResult {
+    fn update(&mut self, context: &mut Context) -> GameResult {
+        // Run input system
+        unsafe {
+            run_input(&self.world, context);
+        }
+
         Ok(())
     }
 
@@ -540,7 +644,7 @@ impl Game {
     }
 
 
-    pub fn initialize(&mut self) {
+    pub unsafe fn initialize(&mut self) {
         // load blocks to board
         self.board_with_blocks.blocks.iter().for_each(|block|{
             let block_in_game = BlockInGame{
