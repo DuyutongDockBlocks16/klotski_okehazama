@@ -13,3 +13,4 @@ ggez = "0.9.3"
 hecs = "0.10.5"
 glam = { version = "0.24", features = ["mint"] }
 regex = "1.11.1"
+lazy_static = "1.4"

@@ -1174,6 +1174,7 @@ dependencies = [
  "ggez",
  "glam",
  "hecs",
+ "lazy_static",
  "log",
  "regex",
  "serde",
