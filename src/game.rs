@@ -10,10 +10,10 @@ use ggez::{
 };
 use glam::Vec2;
 use hecs::{Entity, World};
-const TILE_WIDTH: f32 = 32.0;
 use regex::Regex;
-
 use std::path;
+
+const TILE_WIDTH: f32 = 32.0;
 
 pub struct Wall {}
 
@@ -21,6 +21,7 @@ pub struct Wall {}
 pub struct Movable;
 
 pub struct Immovable;
+
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Position {
@@ -209,7 +210,7 @@ pub fn create_floor(world: &mut World, position: PositionDuringGame) -> Entity {
     ))
 }
 
-pub fn create_numeric_entity(world: &mut World, position: PositionDuringGame) -> Entity {
+pub fn create_numeric_entity(world: &mut World, position: PositionDuringGame, c: &str) -> Entity {
     world.spawn((
         PositionDuringGame { z: 5, ..position },
         Renderable {
@@ -260,7 +261,7 @@ pub fn load_map(world: &mut World, map_string: String, block_dict: HashMap<Strin
                 }
                 c if digit_regex.is_match(c) => {
                     create_floor(world, position);
-                    create_numeric_entity(world, position);
+                    create_numeric_entity(world, position, c);
                 }
                 c => panic!("unrecognized map item {}", c),
             }
