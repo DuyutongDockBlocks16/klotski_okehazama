@@ -14,10 +14,37 @@ use glam::Vec2;
 use hecs::{Entity, World};
 use regex::Regex;
 use std::path;
+use serde::de::Unexpected::Str;
+
+
+struct InputState {
+    keys: std::collections::HashSet<KeyCode>,
+}
+
+impl InputState {
+    fn new() -> Self {
+        InputState {
+            keys: std::collections::HashSet::new(),
+        }
+    }
+
+    fn update(&mut self, ctx: &mut Context) {
+        self.keys.clear(); // 清空之前的按键状态
+        let pressed_keys = ggez::input::keyboard::pressed_keys(ctx);
+        self.keys.extend(pressed_keys); // 更新为当前按下的按键
+    }
+
+    fn is_key_pressed(&self, key: KeyCode) -> bool {
+        self.keys.contains(&key)
+    }
+}
+
 
 const TILE_WIDTH: f32 = 100.0;
 static mut MAP_WIDTH: u8 = 0;
 static mut MAP_HEIGHT: u8 = 0;
+
+static mut SELECTED_BLOCK_ID: String = String::from("");
 
 pub enum GameState {
     Running,
@@ -100,36 +127,36 @@ pub struct Game {
 }
 
 // 检查棋子是否进入出口格子
-pub fn check_game_over(world: &mut World, game_state: &mut GameState) {
-    // 如果游戏已经结束，不再检查
-    if let GameState::GameOver = game_state {
-        return;
-    }
-
-    // 查找出口格子的位置
-    let exit_positions: Vec<PositionDuringGame> = world
-        .query::<(&PositionDuringGame, &Exit)>()
-        .iter()
-        .map(|(_, (pos, _))| *pos)
-        .collect();
-
-    // 查找 ID 为 0 的棋子的占用格子
-    if let Some((_, collision_volume)) = world
-        .query::<(&BlockId, &CollisionVolume)>()
-        .iter()
-        .find(|(_, (block_id, _))| block_id.block_id == "0")
-    {
-        // 判断是否有任意占用格子在出口格子列表中
-        if collision_volume.1
-            .occupied_cells
-            .iter()
-            .any(|cell| exit_positions.contains(cell))
-        {
-            *game_state = GameState::GameOver; // 游戏结束
-            println!("Game Over! Block ID 0 reached the exit.");
-        }
-    }
-}
+// pub fn check_game_over(world: &World, game_state: &mut GameState) {
+//     // 如果游戏已经结束，不再检查
+//     if let GameState::GameOver = game_state {
+//         return;
+//     }
+//
+//     // 查找出口格子的位置
+//     let exit_positions: Vec<PositionDuringGame> = world
+//         .query::<(&PositionDuringGame, &Exit)>()
+//         .iter()
+//         .map(|(_, (pos, _))| *pos)
+//         .collect();
+//
+//     // 查找 ID 为 0 的棋子的占用格子
+//     if let Some((_, collision_volume)) = world
+//         .query::<(&BlockId, &CollisionVolume)>()
+//         .iter()
+//         .find(|(_, (block_id, _))| block_id.block_id == "0")
+//     {
+//         // 判断是否有任意占用格子在出口格子列表中
+//         if collision_volume.1
+//             .occupied_cells
+//             .iter()
+//             .any(|cell| exit_positions.contains(cell))
+//         {
+//             *game_state = GameState::GameOver; // 游戏结束
+//             println!("Game Over! Block ID 0 reached the exit.");
+//         }
+//     }
+// }
 
 fn run_rendering(world: &World, context: &mut Context) {
     // Clearing the screen (this gives us the background colour)
@@ -160,7 +187,45 @@ fn run_rendering(world: &World, context: &mut Context) {
     canvas.finish(context).expect("expected to present");
 }
 
-unsafe fn run_input(world: &World, context: &mut Context) {
+pub unsafe fn select_block(world: &mut World, context: &mut Context) {
+
+    if SELECTED_BLOCK_ID == ""{
+        return;
+    }
+
+    // 如果游戏已经结束，不再处理输入
+    // if let GameState::GameOver = game_state {
+    //     return;
+    // }
+
+    let block_map: HashMap<u8, Entity> = world
+        .query::<(&BlockId, )>()
+        .iter()
+        .map(|(entity, (block_id, ))| (block_id.block_id.parse::<u8>().unwrap(), entity))
+        .collect();
+
+    // 跟踪是否正在选择数字
+
+    // 获取用户输入的 block_id
+    let selected_id = if context.keyboard.is_key_just_pressed(KeyCode::Key0) {
+        println!("0 pressed!");
+        0
+    } else if context.keyboard.is_key_pressed(KeyCode::Key1) {
+        1
+    } else if context.keyboard.is_key_pressed(KeyCode::Key2) {
+        2
+    } else {
+        return;
+    };
+
+
+    println!("selected_id: {:?}", selected_id);
+
+    SELECTED_BLOCK_ID = selected_id.to_string();
+}
+
+// todo
+pub unsafe fn move_block(world: &mut World, context: &mut Context) {
     let mut to_move: Vec<(Entity, KeyCode)> = Vec::new();
 
     // get all the movables and immovables
@@ -175,9 +240,11 @@ unsafe fn run_input(world: &World, context: &mut Context) {
         .map(|t| ((t.1 .0.x, t.1 .0.y), t.0))
         .collect::<HashMap<_, _>>();
 
-    for (_, (position, _player)) in world.query::<(&mut PositionDuringGame, &BlockDuringGame)>().iter() {
+
+
+    if let Some(selected_entity) = SELECTED_BLOCK {
         if context.keyboard.is_key_repeated() {
-            continue;
+            return;;
         }
 
         // Now iterate through current position to the end of the map
@@ -191,7 +258,7 @@ unsafe fn run_input(world: &World, context: &mut Context) {
         } else if context.keyboard.is_key_pressed(KeyCode::Right) {
             KeyCode::Right
         } else {
-            continue;
+            return;
         };
 
         let (start, end, is_x) = match key {
@@ -245,7 +312,10 @@ unsafe fn run_input(world: &World, context: &mut Context) {
             _ => (),
         }
     }
+
+
 }
+
 
 pub unsafe fn initialize_level(board_with_blocks: &Board, world: &mut World) {
 
@@ -378,8 +448,8 @@ pub fn create_block(
         for j in 0..height{
             occupied_cells.push(
                 PositionDuringGame{
-                    x: position.x+i,
-                    y: position.y+j,
+                    x: position.x + i,
+                    y: position.y - j,
                     z: 10,
                 }
             )
@@ -456,9 +526,9 @@ pub fn load_map(world: &mut World, map_string: String, block_dict: HashMap<Strin
 
 impl event::EventHandler<ggez::GameError> for Game {
     fn update(&mut self, context: &mut Context) -> GameResult {
-        // Run input system
         unsafe {
-            // run_input(&self.world, context);
+            select_block(&mut self.world, context);
+            move_block(&mut self.world, context);
         }
 
         Ok(())
