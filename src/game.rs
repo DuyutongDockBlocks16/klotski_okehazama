@@ -13,7 +13,7 @@ use hecs::{Entity, World};
 use regex::Regex;
 use std::path;
 
-const TILE_WIDTH: f32 = 32.0;
+const TILE_WIDTH: f32 = 100.0;
 
 pub struct Wall {}
 
@@ -212,11 +212,26 @@ pub fn create_floor(world: &mut World, position: PositionDuringGame) -> Entity {
     ))
 }
 
-pub fn create_numeric_entity(world: &mut World, position: PositionDuringGame, c: &str, size: Option<&(u8, u8)>) -> Entity {
+pub fn create_exit(world: &mut World, position: PositionDuringGame) -> Entity {
     world.spawn((
         PositionDuringGame { z: 5, ..position },
         Renderable {
-            path: "/images/mountain.png".to_string(),
+            path: "/images/exit.png".to_string(),
+        },
+    ))
+}
+
+pub fn create_block(world: &mut World, position: PositionDuringGame, c: &str, size: Option<&(u8, u8)>) -> Entity {
+
+    let (width, height) = match size {
+        Some(&(w, h)) => (w, h), // 解构 Some 并提取 w 和 h
+        None => (0, 0),        // 提供默认值
+    };
+
+    world.spawn((
+        PositionDuringGame { z: 6, ..position },
+        Renderable {
+            path: "/images/".to_string() + c + ".png",
         },
     ))
 }
@@ -259,12 +274,12 @@ pub fn load_map(world: &mut World, map_string: String, block_dict: HashMap<Strin
                     create_wall(world, position);
                 }
                 "E" => {
-                    create_floor(world, position);
+                    create_exit(world, position);
                 }
                 c if digit_regex.is_match(c) => {
                     let size = block_dict.get(c);
                     create_floor(world, position);
-                    create_numeric_entity(world, position, c, size);
+                    create_block(world, position, c, size);
                 }
                 c => panic!("unrecognized map item {}", c),
             }
@@ -669,7 +684,7 @@ impl Game {
 
         let context_builder = ggez::ContextBuilder::new("klotski_okehazama", "Yutong Du")
             .window_setup(conf::WindowSetup::default().title("Klotski Okehazama!"))
-            .window_mode(conf::WindowMode::default().dimensions(800.0, 600.0))
+            .window_mode(conf::WindowMode::default().dimensions(800.0, 800.0))
             .add_resource_path(path::PathBuf::from("./resources"));
 
         let (context, event_loop) = context_builder.build()?;
