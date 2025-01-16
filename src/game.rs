@@ -17,6 +17,8 @@ const TILE_WIDTH: f32 = 32.0;
 
 pub struct Wall {}
 
+pub struct BlockDuringGame {}
+
 // ANCHOR: components_movement
 pub struct Movable;
 
@@ -210,7 +212,7 @@ pub fn create_floor(world: &mut World, position: PositionDuringGame) -> Entity {
     ))
 }
 
-pub fn create_numeric_entity(world: &mut World, position: PositionDuringGame, c: &str) -> Entity {
+pub fn create_numeric_entity(world: &mut World, position: PositionDuringGame, c: &str, size: Option<&(u8, u8)>) -> Entity {
     world.spawn((
         PositionDuringGame { z: 5, ..position },
         Renderable {
@@ -260,8 +262,9 @@ pub fn load_map(world: &mut World, map_string: String, block_dict: HashMap<Strin
                     create_floor(world, position);
                 }
                 c if digit_regex.is_match(c) => {
+                    let size = block_dict.get(c);
                     create_floor(world, position);
-                    create_numeric_entity(world, position, c);
+                    create_numeric_entity(world, position, c, size);
                 }
                 c => panic!("unrecognized map item {}", c),
             }
