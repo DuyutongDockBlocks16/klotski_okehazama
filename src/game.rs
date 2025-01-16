@@ -19,6 +19,13 @@ const TILE_WIDTH: f32 = 100.0;
 static mut MAP_WIDTH: u8 = 0;
 static mut MAP_HEIGHT: u8 = 0;
 
+pub enum GameState {
+    Running,
+    GameOver,
+}
+
+
+
 pub struct WallDuringGame {}
 
 pub struct BlockDuringGame {}
@@ -47,6 +54,10 @@ pub struct PositionDuringGame {
 #[derive(Debug)]
 pub struct CollisionVolume {
     pub occupied_cells: Vec<PositionDuringGame>,
+}
+
+pub struct BlockId{
+    pub block_id: String,
 }
 
 #[derive(Debug)]
@@ -88,7 +99,37 @@ pub struct Game {
     pub world: World
 }
 
+// 检查棋子是否进入出口格子
+pub fn check_game_over(world: &mut World, game_state: &mut GameState) {
+    // 如果游戏已经结束，不再检查
+    if let GameState::GameOver = game_state {
+        return;
+    }
 
+    // 查找出口格子的位置
+    let exit_positions: Vec<PositionDuringGame> = world
+        .query::<(&PositionDuringGame, &Exit)>()
+        .iter()
+        .map(|(_, (pos, _))| *pos)
+        .collect();
+
+    // 查找 ID 为 0 的棋子的占用格子
+    if let Some((_, collision_volume)) = world
+        .query::<(&BlockId, &CollisionVolume)>()
+        .iter()
+        .find(|(_, (block_id, _))| block_id.block_id == "0")
+    {
+        // 判断是否有任意占用格子在出口格子列表中
+        if collision_volume.1
+            .occupied_cells
+            .iter()
+            .any(|cell| exit_positions.contains(cell))
+        {
+            *game_state = GameState::GameOver; // 游戏结束
+            println!("Game Over! Block ID 0 reached the exit.");
+        }
+    }
+}
 
 fn run_rendering(world: &World, context: &mut Context) {
     // Clearing the screen (this gives us the background colour)
@@ -315,10 +356,16 @@ pub fn create_exit(world: &mut World, position: PositionDuringGame) -> Entity {
         Renderable {
             path: "/images/exit.png".to_string(),
         },
+        ExitDuringGame{}
     ))
 }
 
-pub fn create_block(world: &mut World, position: PositionDuringGame, c: &str, size: Option<&(u8, u8)>) -> Entity {
+pub fn create_block(
+    world: &mut World,
+    position: PositionDuringGame,
+    block_id: &str,
+    size: Option<&(u8, u8)>
+) -> Entity {
 
     let (width, height) = match size {
         Some(&(w, h)) => (w, h), // 解构 Some 并提取 w 和 h
@@ -327,8 +374,8 @@ pub fn create_block(world: &mut World, position: PositionDuringGame, c: &str, si
 
     let mut occupied_cells=vec![];
 
-    for i in width{
-        for j in height{
+    for i in 0..width{
+        for j in 0..height{
             occupied_cells.push(
                 PositionDuringGame{
                     x: position.x+i,
@@ -342,7 +389,10 @@ pub fn create_block(world: &mut World, position: PositionDuringGame, c: &str, si
     world.spawn((
         PositionDuringGame { z: 10, ..position },
         Renderable {
-            path: "/images/".to_string() + c + ".png",
+            path: "/images/".to_string() + block_id + ".png",
+        },
+        BlockId {
+            block_id: block_id.to_string(),
         },
         Size { width, height },
         CollisionVolume {
@@ -408,7 +458,7 @@ impl event::EventHandler<ggez::GameError> for Game {
     fn update(&mut self, context: &mut Context) -> GameResult {
         // Run input system
         unsafe {
-            run_input(&self.world, context);
+            // run_input(&self.world, context);
         }
 
         Ok(())
