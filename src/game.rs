@@ -325,10 +325,28 @@ pub fn create_block(world: &mut World, position: PositionDuringGame, c: &str, si
         None => (0, 0),        // 提供默认值
     };
 
+    let mut occupied_cells=vec![];
+
+    for i in width{
+        for j in height{
+            occupied_cells.push(
+                PositionDuringGame{
+                    x: position.x+i,
+                    y: position.y+j,
+                    z: 10,
+                }
+            )
+        }
+    }
+
     world.spawn((
         PositionDuringGame { z: 10, ..position },
         Renderable {
             path: "/images/".to_string() + c + ".png",
+        },
+        Size { width, height },
+        CollisionVolume {
+            occupied_cells
         },
         BlockDuringGame {},
         Movable {},
