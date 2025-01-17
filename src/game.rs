@@ -175,16 +175,16 @@ pub unsafe fn initialize_level(board_with_blocks: &Board, world: &mut World) {
     println!("{}", map_string);
 
     // 生成 Block 的宽高列表
-    let block_dimensions: Vec<(u8, u8, u8)> = board_with_blocks
+    let block_info: Vec<(u8, u8, u8, bool)> = board_with_blocks
         .blocks
         .iter()
-        .map(|block| (block.block_id.clone(), block.width, block.height))
+        .map(|block| (block.block_id.clone(), block.width, block.height, block.can_escape))
         .collect();
 
     // 转换为 HashMap
-    let block_dict: HashMap<String, (u8, u8)> = block_dimensions
+    let block_dict: HashMap<String, (u8, u8, bool)> = block_info
         .into_iter()
-        .map(|(block_id, width, height)| (block_id.to_string(), (width, height)))
+        .map(|(block_id, width, height, can_escape)| (block_id.to_string(), (width, height, can_escape)))
         .collect();
 
     // 使用调试模式打印
@@ -193,7 +193,7 @@ pub unsafe fn initialize_level(board_with_blocks: &Board, world: &mut World) {
     load_map(world, map_string, block_dict);
 }
 
-pub fn load_map(world: &mut World, map_string: String, block_dict: HashMap<String, (u8, u8)> ) {
+pub fn load_map(world: &mut World, map_string: String, block_dict: HashMap<String, (u8, u8, bool)> ) {
     // read all lines
     let rows: Vec<&str> = map_string.trim().split('\n').map(|x| x.trim()).collect();
 
@@ -223,9 +223,9 @@ pub fn load_map(world: &mut World, map_string: String, block_dict: HashMap<Strin
                     create_exit(world, position);
                 }
                 c if digit_regex.is_match(c) => {
-                    let size = block_dict.get(c);
+                    let info = block_dict.get(c);
                     create_floor(world, position);
-                    create_block(world, position, c, size);
+                    create_block(world, position, c, info);
                 }
                 c => panic!("unrecognized map item {}", c),
             }

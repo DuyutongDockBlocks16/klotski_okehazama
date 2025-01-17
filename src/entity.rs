@@ -4,7 +4,10 @@ pub struct WallDuringGame {}
 
 pub struct BlockDuringGame {}
 
-pub struct ExitDuringGame {}
+pub struct ExitDuringGame {
+    passable_by: Vec<BlockType>,
+}
+
 
 // ANCHOR: components_movement
 pub struct Movable;
@@ -38,6 +41,14 @@ pub struct Renderable {
     pub path: String,
 }
 
+pub enum BlockType {
+    Regular,   // 普通棋子
+    Special,   // 可以通过 Exit 的特殊棋子
+}
+
+pub struct BlockEscapeType {
+    pub block_type: BlockType,
+}
 
 pub fn create_floor(world: &mut World, position: PositionDuringGame) -> Entity {
     world.spawn((
@@ -54,7 +65,9 @@ pub fn create_exit(world: &mut World, position: PositionDuringGame) -> Entity {
         Renderable {
             path: "/images/exit.png".to_string(),
         },
-        ExitDuringGame{}
+        ExitDuringGame{ 
+            passable_by: vec![BlockType::Special],
+        }
     ))
 }
 
@@ -62,12 +75,12 @@ pub fn create_block(
     world: &mut World,
     position: PositionDuringGame,
     block_id: &str,
-    size: Option<&(u8, u8)>
+    size: Option<&(u8, u8, bool)>
 ) -> Entity {
 
-    let (width, height) = match size {
-        Some(&(w, h)) => (w, h), // 解构 Some 并提取 w 和 h
-        None => (0, 0),        // 提供默认值
+    let (width, height, can_escapse) = match size {
+        Some(&(w, h, can_escapse)) => (w, h, can_escapse), // 解构 Some 并提取 w 和 h
+        None => (0, 0, false),        // 提供默认值
     };
 
     let mut occupied_cells=vec![];
@@ -84,6 +97,11 @@ pub fn create_block(
         }
     }
 
+    let block_type = match can_escapse {
+        false => BlockType::Regular,
+        true => BlockType::Special
+    };
+
     world.spawn((
         PositionDuringGame { z: 10, ..position },
         Renderable {
@@ -95,6 +113,9 @@ pub fn create_block(
         Size { width, height },
         CollisionVolume {
             occupied_cells
+        },
+        BlockEscapeType {
+            block_type
         },
         BlockDuringGame {},
         Movable {},
