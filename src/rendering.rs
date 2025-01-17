@@ -37,13 +37,6 @@ pub unsafe fn select_block(world: &mut World, context: &mut Context) {
         return;
     }
 
-
-    let block_map: HashMap<u8, Entity> = world
-        .query::<(&BlockId, )>()
-        .iter()
-        .map(|(entity, (block_id, ))| (block_id.block_id.parse::<u8>().unwrap(), entity))
-        .collect();
-
     // 跟踪是否正在选择数字
 
     // 获取用户输入的 block_id
