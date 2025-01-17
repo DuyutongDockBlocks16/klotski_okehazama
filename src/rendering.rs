@@ -31,7 +31,7 @@ fn get_selected_block_id() -> String {
     block_id.clone()
 }
 
-pub unsafe fn select_block(world: &mut World, context: &mut Context) {
+pub unsafe fn select_block( context: &mut Context) {
 
     if get_selected_block_id() != ""{
         return;

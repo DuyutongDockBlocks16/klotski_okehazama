@@ -82,7 +82,7 @@ pub struct Game {
 impl event::EventHandler<ggez::GameError> for Game {
     fn update(&mut self, context: &mut Context) -> GameResult {
         unsafe {
-            select_block(&mut self.world, context);
+            select_block( context);
             move_block(&mut self.world, context);
         }
 
