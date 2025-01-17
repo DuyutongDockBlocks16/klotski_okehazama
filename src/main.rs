@@ -6,6 +6,8 @@ use crate::block::Block;
 mod block;
 mod board;
 mod game;
+mod entity;
+mod rendering;
 
 
 fn initialize_box() -> Board {

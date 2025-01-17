@@ -1,86 +1,21 @@
-use std::ascii::escape_default;
 use crate::board::{Board, ExitSide};
 use std::collections::HashMap;
 use std::option::Option;
-use crate::block::Block;
 use ggez::{
     conf, event,
-    graphics::{self, DrawParam, Image},
-    input::keyboard::KeyCode,
-    input::mouse::MouseButton,
     Context, GameResult,
 };
-use glam::Vec2;
-use hecs::{Entity, World};
+
+use hecs::{World};
 use regex::Regex;
 use std::path;
-use serde::de::Unexpected::Str;
-
-
-struct InputState {
-    keys: std::collections::HashSet<KeyCode>,
-}
-
-impl InputState {
-    fn new() -> Self {
-        InputState {
-            keys: std::collections::HashSet::new(),
-        }
-    }
-
-    fn update(&mut self, ctx: &mut Context) {
-        self.keys.clear(); // 清空之前的按键状态
-        let pressed_keys = ggez::input::keyboard::pressed_keys(ctx);
-        self.keys.extend(pressed_keys); // 更新为当前按下的按键
-    }
-
-    fn is_key_pressed(&self, key: KeyCode) -> bool {
-        self.keys.contains(&key)
-    }
-}
-
-
-const TILE_WIDTH: f32 = 100.0;
-static mut MAP_WIDTH: u8 = 0;
-static mut MAP_HEIGHT: u8 = 0;
-
-use std::sync::OnceLock;
-
-use std::sync::Mutex;
-use lazy_static::lazy_static;
-
-lazy_static! {
-    static ref SELECTED_BLOCK_ID: Mutex<String> = Mutex::new(String::new());
-}
-
-fn set_selected_block_id(id: String) {
-    let mut block_id = SELECTED_BLOCK_ID.lock().unwrap();
-    *block_id = id.to_string();
-}
-
-fn get_selected_block_id() -> String {
-    let block_id = SELECTED_BLOCK_ID.lock().unwrap();
-    block_id.clone()
-}
+use crate::entity::{*};
+use crate::rendering::{*};
 
 pub enum GameState {
     Running,
     GameOver,
 }
-
-
-
-pub struct WallDuringGame {}
-
-pub struct BlockDuringGame {}
-
-pub struct ExitDuringGame {}
-
-// ANCHOR: components_movement
-pub struct Movable;
-
-pub struct Immovable;
-
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Position {
@@ -88,37 +23,10 @@ pub struct Position {
     pub y: isize,
 }
 
-#[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
-pub struct PositionDuringGame {
-    x: u8,
-    y: u8,
-    z: u8,
-}
-
-#[derive(Debug)]
-pub struct CollisionVolume {
-    pub occupied_cells: Vec<PositionDuringGame>,
-}
-
-pub struct BlockId{
-    pub block_id: String,
-}
-
-#[derive(Debug)]
-pub struct Size {
-    pub width: u8,
-    pub height: u8,
-}
-
 pub struct Exit{
     adjacent_grid: Vec<Position>,
     exit_direction: ExitSide,
 }
-
-pub struct Renderable {
-    path: String,
-}
-
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BlockInGame {
@@ -128,10 +36,6 @@ pub struct BlockInGame {
     pub width: u8,                   // 宽度
     pub height: u8,                  // 高度
     pub current_location: Position, // 当前位置(x,y)
-    pub can_move_up: bool,          // 是否可以向上移动
-    pub can_move_down: bool,          // 是否可以向下移动
-    pub can_move_left: bool,          // 是否可以向左移动
-    pub can_move_right: bool,          // 是否可以向右移动
     pub can_escape: bool,            // 是否可以逃脱
 }
 
@@ -175,160 +79,25 @@ pub struct Game {
 //     }
 // }
 
-fn run_rendering(world: &World, context: &mut Context) {
-    // Clearing the screen (this gives us the background colour)
-    let mut canvas =
-        graphics::Canvas::from_frame(context, graphics::Color::from([0.95, 0.95, 0.95, 1.0]));
-
-    // Get all the renderables with their positions and sort by the position z
-    // This will allow us to have entities layered visually.
-    let mut query = world.query::<(&PositionDuringGame, &Renderable)>();
-    let mut rendering_data: Vec<(Entity, (&PositionDuringGame, &Renderable))> = query.into_iter().collect();
-    rendering_data.sort_by_key(|&k| k.1 .0.z);
-
-    // Iterate through all pairs of positions & renderables, load the image
-    // and draw it at the specified position.
-    for (_, (position, renderable)) in rendering_data.iter() {
-        // Load the image
-        let image = Image::from_path(context, renderable.path.clone()).unwrap();
-        let x = position.x as f32 * TILE_WIDTH;
-        let y = position.y as f32 * TILE_WIDTH;
-
-        // draw
-        let draw_params = DrawParam::new().dest(Vec2::new(x, y));
-        canvas.draw(&image, draw_params);
-    }
-
-    // Finally, present the canvas, this will actually display everything
-    // on the screen.
-    canvas.finish(context).expect("expected to present");
-}
-
-pub unsafe fn select_block(world: &mut World, context: &mut Context) {
-
-    if get_selected_block_id() != ""{
-        return;
-    }
-
-
-    let block_map: HashMap<u8, Entity> = world
-        .query::<(&BlockId, )>()
-        .iter()
-        .map(|(entity, (block_id, ))| (block_id.block_id.parse::<u8>().unwrap(), entity))
-        .collect();
-
-    // 跟踪是否正在选择数字
-
-    // 获取用户输入的 block_id
-    let selected_id = if context.keyboard.is_key_just_pressed(KeyCode::Key0) {
-        println!("0 pressed!");
-        0
-    } else if context.keyboard.is_key_pressed(KeyCode::Key1) {
-        1
-    } else if context.keyboard.is_key_pressed(KeyCode::Key2) {
-        2
-    } else {
-        return;
-    };
-
-
-    println!("selected_id: {:?}", selected_id);
-
-    set_selected_block_id(selected_id.to_string());
-
-}
-
-// todo
-pub unsafe fn move_block(world: &mut World, context: &mut Context) {
-    let mut to_move: Vec<(Entity, KeyCode)> = Vec::new();
-
-    // get all the movables and immovables
-    let mov: HashMap<(u8, u8), Entity> = world
-        .query::<(&PositionDuringGame, &Movable)>()
-        .iter()
-        .map(|t| ((t.1 .0.x, t.1 .0.y), t.0))
-        .collect::<HashMap<_, _>>();
-    let immov: HashMap<(u8, u8), Entity> = world
-        .query::<(&PositionDuringGame, &Immovable)>()
-        .iter()
-        .map(|t| ((t.1 .0.x, t.1 .0.y), t.0))
-        .collect::<HashMap<_, _>>();
-
-    for (_, (position, block_id)) in world.query::<(&mut PositionDuringGame, &BlockId)>().iter() {
-        if block_id.block_id == get_selected_block_id() {
-            if context.keyboard.is_key_repeated() {
-                continue;
-            }
-
-            // Now iterate through current position to the end of the map
-            // on the correct axis and check what needs to move.
-            let key = if context.keyboard.is_key_pressed(KeyCode::Up) {
-                KeyCode::Up
-            } else if context.keyboard.is_key_pressed(KeyCode::Down) {
-                KeyCode::Down
-            } else if context.keyboard.is_key_pressed(KeyCode::Left) {
-                println!("move left!");
-                KeyCode::Left
-            } else if context.keyboard.is_key_pressed(KeyCode::Right) {
-                KeyCode::Right
-            } else {
-                continue;
-            };
-
-            let (start, end, is_x) = match key {
-                KeyCode::Up => (position.y, 0, false),
-                KeyCode::Down => (position.y, MAP_HEIGHT - 1, false),
-                KeyCode::Left => (position.x, 0, true),
-                KeyCode::Right => (position.x, MAP_WIDTH - 1, true),
-                _ => continue,
-            };
-
-            let range = if start < end {
-                (start..=end).collect::<Vec<_>>()
-            } else {
-                (end..=start).rev().collect::<Vec<_>>()
-            };
-
-            for x_or_y in range {
-                let pos = if is_x {
-                    (x_or_y, position.y)
-                } else {
-                    (position.x, x_or_y)
-                };
-
-                // find a movable
-                // if it exists, we try to move it and continue
-                // if it doesn't exist, we continue and try to find an immovable instead
-                match mov.get(&pos) {
-                    Some(entity) => to_move.push((*entity, key)),
-                    None => {
-                        // find an immovable
-                        // if it exists, we need to stop and not move anything
-                        // if it doesn't exist, we stop because we found a gap
-                        match immov.get(&pos) {
-                            Some(_id) => to_move.clear(),
-                            None => break,
-                        }
-                    }
-                }
-            }
+impl event::EventHandler<ggez::GameError> for Game {
+    fn update(&mut self, context: &mut Context) -> GameResult {
+        unsafe {
+            select_block(&mut self.world, context);
+            move_block(&mut self.world, context);
         }
+
+        Ok(())
     }
 
-    // Now actually move what needs to be moved
-    for (entity, key) in to_move {
-        let mut position = world.get::<&mut PositionDuringGame>(entity).unwrap();
-
-        match key {
-            KeyCode::Up => position.y -= 1,
-            KeyCode::Down => position.y += 1,
-            KeyCode::Left => position.x -= 1,
-            KeyCode::Right => position.x += 1,
-            _ => (),
+    fn draw(&mut self, context: &mut Context) -> GameResult {
+        // Render game entities
+        {
+            run_rendering(&self.world, context);
         }
+
+        Ok(())
     }
 }
-
 
 pub unsafe fn initialize_level(board_with_blocks: &Board, world: &mut World) {
 
@@ -424,79 +193,6 @@ pub unsafe fn initialize_level(board_with_blocks: &Board, world: &mut World) {
     load_map(world, map_string, block_dict);
 }
 
-pub fn create_floor(world: &mut World, position: PositionDuringGame) -> Entity {
-    world.spawn((
-        PositionDuringGame { z: 5, ..position },
-        Renderable {
-            path: "/images/floor.png".to_string(),
-        },
-    ))
-}
-
-pub fn create_exit(world: &mut World, position: PositionDuringGame) -> Entity {
-    world.spawn((
-        PositionDuringGame { z: 6, ..position },
-        Renderable {
-            path: "/images/exit.png".to_string(),
-        },
-        ExitDuringGame{}
-    ))
-}
-
-pub fn create_block(
-    world: &mut World,
-    position: PositionDuringGame,
-    block_id: &str,
-    size: Option<&(u8, u8)>
-) -> Entity {
-
-    let (width, height) = match size {
-        Some(&(w, h)) => (w, h), // 解构 Some 并提取 w 和 h
-        None => (0, 0),        // 提供默认值
-    };
-
-    let mut occupied_cells=vec![];
-
-    for i in 0..width{
-        for j in 0..height{
-            occupied_cells.push(
-                PositionDuringGame{
-                    x: position.x + i,
-                    y: position.y - j,
-                    z: 10,
-                }
-            )
-        }
-    }
-
-    world.spawn((
-        PositionDuringGame { z: 10, ..position },
-        Renderable {
-            path: "/images/".to_string() + block_id + ".png",
-        },
-        BlockId {
-            block_id: block_id.to_string(),
-        },
-        Size { width, height },
-        CollisionVolume {
-            occupied_cells
-        },
-        BlockDuringGame {},
-        Movable {},
-    ))
-}
-
-pub fn create_wall(world: &mut World, position: PositionDuringGame) -> Entity {
-    world.spawn((
-        PositionDuringGame { z: 10, ..position },
-        Renderable {
-            path: "/images/mountain.png".to_string(),
-        },
-        WallDuringGame {},
-        Immovable {},
-    ))
-}
-
 pub fn load_map(world: &mut World, map_string: String, block_dict: HashMap<String, (u8, u8)> ) {
     // read all lines
     let rows: Vec<&str> = map_string.trim().split('\n').map(|x| x.trim()).collect();
@@ -537,27 +233,6 @@ pub fn load_map(world: &mut World, map_string: String, block_dict: HashMap<Strin
     }
 }
 
-impl event::EventHandler<ggez::GameError> for Game {
-    fn update(&mut self, context: &mut Context) -> GameResult {
-        unsafe {
-            select_block(&mut self.world, context);
-            move_block(&mut self.world, context);
-        }
-
-        Ok(())
-    }
-
-    fn draw(&mut self, context: &mut Context) -> GameResult {
-        // Render game entities
-        {
-            run_rendering(&self.world, context);
-        }
-
-        Ok(())
-    }
-}
-
-
 impl Game {
     pub fn new(board_with_blocks: Board) -> Self {
         Game {
@@ -586,7 +261,7 @@ impl Game {
         println!("\nBlocks In Game:");
         for block in &self.blocks_in_game {
             println!(
-                "Block ID: {}, English Name: {}, Japanese Name: {}, Position: ({}, {}), Width: {}, Height: {}, Can Escape: {}, Can Move Up: {}, Can Move Down: {}, Can Move Left: {}, Can Move Right: {}",
+                "Block ID: {}, English Name: {}, Japanese Name: {}, Position: ({}, {}), Width: {}, Height: {}, Can Escape: {}",
                 block.block_id,
                 block.block_english_name,
                 block.block_japanese_name,
@@ -595,16 +270,8 @@ impl Game {
                 block.width,
                 block.height,
                 block.can_escape,
-                block.can_move_up,
-                block.can_move_down,
-                block.can_move_left,
-                block.can_move_right
             );
 
-            println!(
-                "Movement Status: Up = {}, Down = {}, Left = {}, Right = {}",
-                block.can_move_up, block.can_move_down, block.can_move_left, block.can_move_right
-            );
         }
 
         println!("\nGrid State:");
@@ -636,24 +303,11 @@ impl Game {
 
         // 首先检查是否有棋子摆放超出边界
         self.board_with_blocks.blocks.iter().for_each(|block| {
-            if block.initial_location.0 < 0 {
-                authorization_passed_flag = false;
-                return_message.push_str(
-                    &format!("Block name: {} initial location exceeds the left border;\n", block.block_english_name)
-                );
-            }
 
             if block.initial_location.0 > self.board_with_blocks.width {
                 authorization_passed_flag = false;
                 return_message.push_str(
                     &format!("Block name: {} initial location exceeds the right border;\n", block.block_english_name)
-                );
-            }
-
-            if block.initial_location.1 < 0 {
-                authorization_passed_flag = false;
-                return_message.push_str(
-                    &format!("Block name: {} initial location exceeds the bottom border;\n", block.block_english_name)
                 );
             }
 
@@ -670,13 +324,6 @@ impl Game {
                 authorization_passed_flag = false;
                 return_message.push_str(
                     &format!("Block name: {} initial location exceeds the right border;\n", block.block_english_name)
-                );
-            }
-
-            if block.initial_location.1 - block.height - 1 < 0 {
-                authorization_passed_flag = false;
-                return_message.push_str(
-                    &format!("Block name: {} initial location exceeds the bottom border;\n", block.block_english_name)
                 );
             }
 
@@ -730,70 +377,6 @@ impl Game {
         return authorization_passed_flag;
     }
 
-    fn is_reach_the_top_bounds(&self, position: Position) -> bool {
-        return position.y == (self.board_with_blocks.height - 1) as isize;
-    }
-
-    fn is_reach_the_bottom_bounds(&self, position: Position) -> bool {
-        return position.y == 0;
-    }
-
-    fn is_reach_the_right_bounds(&self, position: Position) -> bool {
-        return position.x == (self.board_with_blocks.width - 1) as isize;
-    }
-
-    fn is_reach_the_left_bounds(&self, position: Position) -> bool {
-        return position.x == 0;
-    }
-
-    fn is_top_position_empty(&self, position: Position) -> bool {
-        self.grid[ (position.y + 1) as usize ][ position.x as usize ].is_none()
-    }
-
-    fn is_bottom_position_empty(&self, position: Position) -> bool {
-        self.grid[ (position.y - 1) as usize ][ position.x as usize ].is_none()
-    }
-
-    fn is_right_position_empty(&self, position: Position) -> bool {
-        self.grid[ position.y as usize ][ (position.x + 1) as usize ].is_none()
-    }
-
-    fn is_left_position_empty(&self, position: Position) -> bool {
-        self.grid[ position.y as usize ][ (position.x - 1) as usize ].is_none()
-    }
-
-    fn can_move_up(&self, position: Position, can_escape_flag: bool) -> bool {
-        if can_escape_flag && self.exit.exit_direction == ExitSide::Top {
-            return self.exit.adjacent_grid.contains(&position);
-        }
-
-        !self.is_reach_the_top_bounds(position) && self.is_top_position_empty(position)
-    }
-
-    fn can_move_down(&self, position: Position, can_escape_flag: bool) -> bool {
-        if can_escape_flag && self.exit.exit_direction == ExitSide::Bottom {
-            return self.exit.adjacent_grid.contains(&position);
-        }
-
-        !self.is_reach_the_bottom_bounds(position) && self.is_bottom_position_empty(position)
-    }
-
-    fn can_move_left(&self, position: Position, can_escape_flag: bool) -> bool {
-        if can_escape_flag && self.exit.exit_direction == ExitSide::Left {
-            return self.exit.adjacent_grid.contains(&position);
-        }
-
-        !self.is_reach_the_left_bounds(position) && self.is_left_position_empty(position)
-    }
-
-    fn can_move_right(&self, position: Position, can_escape_flag: bool) -> bool {
-        if can_escape_flag && self.exit.exit_direction == ExitSide::Right {
-            return self.exit.adjacent_grid.contains(&position);
-        }
-
-        !self.is_reach_the_right_bounds(position) && self.is_right_position_empty(position)
-    }
-
 
     pub unsafe fn initialize(&mut self) {
         // load blocks to board
@@ -805,10 +388,6 @@ impl Game {
                     width: block.width,
                     height: block.height,
                     current_location: Position { x: block.initial_location.0 as isize, y: block.initial_location.1 as isize },
-                    can_move_up: false,
-                    can_move_down: false,
-                    can_move_left: false,
-                    can_move_right: false,
                     can_escape: block.can_escape,
             };
             self.blocks_in_game.push(block_in_game)
@@ -857,7 +436,6 @@ impl Game {
             }
         }
 
-
         // locate blocks to board
         self.blocks_in_game.iter().for_each(|block|{
             for i in 0..block.width {
@@ -869,71 +447,13 @@ impl Game {
                 }
             }
         });
-
-        // initialize ability of move
-        let mut move_ability_of_blocks:Vec<( bool, bool, bool, bool)> = vec![]; // ("up", "down", "left", "right")
-        self.blocks_in_game.iter().for_each(|block|{
-
-            let can_escape_flag: bool = block.can_escape;
-
-            let mut can_move_up_flag:bool = true;
-
-            for i in 0..block.width {
-                let position = Position{ x: block.current_location.x + i as isize, y: block.current_location.y };
-                if !self.can_move_up(position, can_escape_flag) {
-                    can_move_up_flag = false;
-                    break
-                }
-            }
-
-
-            let mut can_move_down_flag:bool = true;
-
-            for i in 0..block.width {
-                let position = Position{ x: block.current_location.x + i as isize , y: block.current_location.y - block.height as isize + 1};
-                if !self.can_move_down(position, can_escape_flag) {
-                    can_move_down_flag = false;
-                    break
-                }
-            }
-
-            let mut can_move_left_flag:bool = true;
-
-            for i in 0..block.height {
-                let position = Position{ x: block.current_location.x , y: block.current_location.y - i as isize };
-                if !self.can_move_left(position, can_escape_flag) {
-                    can_move_left_flag = false;
-                    break
-                }
-            }
-
-            let mut can_move_right_flag:bool = true;
-
-            for i in 0..block.height {
-                let position = Position{ x: block.current_location.x + block.width as isize - 1, y: block.current_location.y - i as isize };
-                if !self.can_move_right(position, can_escape_flag) {
-                    can_move_right_flag = false;
-                    break
-                }
-            }
-            move_ability_of_blocks.push((can_move_up_flag, can_move_down_flag, can_move_left_flag, can_move_right_flag))
-        });
-
-        for (i, block) in self.blocks_in_game.iter_mut().enumerate(){
-            block.can_move_up = move_ability_of_blocks[i].0;
-            block.can_move_down = move_ability_of_blocks[i].1;
-            block.can_move_left = move_ability_of_blocks[i].2;
-            block.can_move_right = move_ability_of_blocks[i].3;
-        }
-
+    
         // load world to get ready for rendering
         let mut world = World::new();
         initialize_level(&self.board_with_blocks, &mut world);
 
         self.world = world;
     }
-
-
 
     pub fn start(self) -> GameResult {
 
