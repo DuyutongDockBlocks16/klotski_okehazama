@@ -6,7 +6,7 @@ use ggez::{
     Context, GameResult,
 };
 
-use hecs::{World};
+use hecs::World;
 use regex::Regex;
 use std::path;
 use crate::entity::{*};
