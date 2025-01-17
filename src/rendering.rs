@@ -68,13 +68,23 @@ pub unsafe fn move_block(world: &mut World, context: &mut Context) {
         .iter()
         .map(|t| ((t.1 .0.x, t.1 .0.y), t.0))
         .collect::<HashMap<_, _>>();
+
+    let mov_collision_volume: HashMap<(u8, u8), Entity> = world
+        .query::<(&CollisionVolume)>()
+        .iter()
+        .flat_map(|(entity, collision_volume)|{
+            collision_volume.occupied_cells.iter().map(move |pos| ((pos.x, pos.y), entity))
+        })
+        .collect::<HashMap<_, _>>();
+
     let immov: HashMap<(u8, u8), Entity> = world
         .query::<(&PositionDuringGame, &Immovable)>()
         .iter()
         .map(|t| ((t.1 .0.x, t.1 .0.y), t.0))
         .collect::<HashMap<_, _>>();
 
-    for (_, (position, block_id)) in world.query::<(&mut PositionDuringGame, &BlockId)>().iter() {
+    for (_, (position, block_id, collision_volume, block_escape_type)) in 
+    world.query::<(&mut PositionDuringGame, &BlockId, &CollisionVolume, &BlockEscapeType)>().iter() {
         if block_id.block_id == get_selected_block_id() {
             if context.keyboard.is_key_repeated() {
                 continue;
@@ -122,12 +132,19 @@ pub unsafe fn move_block(world: &mut World, context: &mut Context) {
                 match mov.get(&pos) {
                     Some(entity) => to_move.push((*entity, key)),
                     None => {
-                        // find an immovable
-                        // if it exists, we need to stop and not move anything
-                        // if it doesn't exist, we stop because we found a gap
-                        match immov.get(&pos) {
-                            Some(_id) => to_move.clear(),
-                            None => break,
+                        match mov_collision_volume.get(&pos){
+                            Some(entity) => {
+                                let entity_to_check = (*entity, key); // 要检查的元素
+                                if !to_move.iter().any(|&x| x == entity_to_check) {
+                                    to_move.push(entity_to_check); // 如果不存在相同元素，则添加
+                                } 
+                            },
+                            None => {
+                                match immov.get(&pos) {
+                                    Some(_id) => to_move.clear(),
+                                    None => break,
+                                }
+                            }
                         }
                     }
                 }
@@ -138,12 +155,33 @@ pub unsafe fn move_block(world: &mut World, context: &mut Context) {
     // Now actually move what needs to be moved
     for (entity, key) in to_move {
         let mut position = world.get::<&mut PositionDuringGame>(entity).unwrap();
-
+        let mut volume = world.get::<&mut CollisionVolume>(entity).unwrap();
+        
         match key {
-            KeyCode::Up => position.y -= 1,
-            KeyCode::Down => position.y += 1,
-            KeyCode::Left => position.x -= 1,
-            KeyCode::Right => position.x += 1,
+            KeyCode::Up => {
+                position.y -= 1;
+                for cell in volume.occupied_cells.iter_mut() {
+                    cell.y -= 1; // 更新 occupied_cells 中的 y 坐标
+                }
+            },
+            KeyCode::Down => {
+                position.y += 1;
+                for cell in volume.occupied_cells.iter_mut() {
+                    cell.y += 1; // 更新 occupied_cells 中的 y 坐标
+                }
+            },
+            KeyCode::Left => {
+                position.x -= 1;
+                for cell in volume.occupied_cells.iter_mut() {
+                    cell.x -= 1; // 更新 occupied_cells 中的 x 坐标
+                }
+            },
+            KeyCode::Right => {
+                position.x += 1;
+                for cell in volume.occupied_cells.iter_mut() {
+                    cell.x += 1; // 更新 occupied_cells 中的 x 坐标
+                }
+            },
             _ => (),
         }
     }

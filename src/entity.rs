@@ -41,6 +41,7 @@ pub struct Renderable {
     pub path: String,
 }
 
+#[derive(Debug)]
 pub enum BlockType {
     Regular,   // 普通棋子
     Special,   // 可以通过 Exit 的特殊棋子
@@ -48,27 +49,6 @@ pub enum BlockType {
 
 pub struct BlockEscapeType {
     pub block_type: BlockType,
-}
-
-pub fn create_floor(world: &mut World, position: PositionDuringGame) -> Entity {
-    world.spawn((
-        PositionDuringGame { z: 5, ..position },
-        Renderable {
-            path: "/images/floor.png".to_string(),
-        },
-    ))
-}
-
-pub fn create_exit(world: &mut World, position: PositionDuringGame) -> Entity {
-    world.spawn((
-        PositionDuringGame { z: 6, ..position },
-        Renderable {
-            path: "/images/exit.png".to_string(),
-        },
-        ExitDuringGame{ 
-            passable_by: vec![BlockType::Special],
-        }
-    ))
 }
 
 pub fn create_block(
@@ -90,7 +70,7 @@ pub fn create_block(
             occupied_cells.push(
                 PositionDuringGame{
                     x: position.x + i,
-                    y: position.y - j,
+                    y: position.y + j,
                     z: 10,
                 }
             )
@@ -101,6 +81,15 @@ pub fn create_block(
         false => BlockType::Regular,
         true => BlockType::Special
     };
+
+    // 打印棋子的相关信息
+    println!("Creating block with ID: {}", block_id);
+    println!("Block Type: {:?}", block_type);
+    println!("Occupied Cells:");
+    for cell in &occupied_cells {
+        println!(" - Position: ({}, {}, {})", cell.x, cell.y, cell.z);
+    }
+    println!("==============================================");
 
     world.spawn((
         PositionDuringGame { z: 10, ..position },
@@ -122,6 +111,20 @@ pub fn create_block(
     ))
 }
 
+
+pub fn create_exit(world: &mut World, position: PositionDuringGame) -> Entity {
+    world.spawn((
+        PositionDuringGame { z: 6, ..position },
+        Renderable {
+            path: "/images/exit.png".to_string(),
+        },
+        ExitDuringGame{ 
+            passable_by: vec![BlockType::Special],
+        },
+        Immovable {},
+    ))
+}
+
 pub fn create_wall(world: &mut World, position: PositionDuringGame) -> Entity {
     world.spawn((
         PositionDuringGame { z: 10, ..position },
@@ -133,3 +136,11 @@ pub fn create_wall(world: &mut World, position: PositionDuringGame) -> Entity {
     ))
 }
 
+pub fn create_floor(world: &mut World, position: PositionDuringGame) -> Entity {
+    world.spawn((
+        PositionDuringGame { z: 5, ..position },
+        Renderable {
+            path: "/images/floor.png".to_string(),
+        },
+    ))
+}
