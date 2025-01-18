@@ -15,11 +15,6 @@ use crate::rendering::*;
 use crate::components::*;
 use crate::constants::{MAP_HEIGHT, MAP_WIDTH, EXIT_KEY, EXIT_POSITIONS};
 
-pub enum GameState {
-    Running,
-    GameOver,
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Position {
     pub x: isize,
@@ -49,38 +44,6 @@ pub struct Game {
     pub exit: Exit,
     pub world: World
 }
-
-// 检查棋子是否进入出口格子
-// pub fn check_game_over(world: &World, game_state: &mut GameState) {
-//     // 如果游戏已经结束，不再检查
-//     if let GameState::GameOver = game_state {
-//         return;
-//     }
-//
-//     // 查找出口格子的位置
-//     let exit_positions: Vec<PositionDuringGame> = world
-//         .query::<(&PositionDuringGame, &Exit)>()
-//         .iter()
-//         .map(|(_, (pos, _))| *pos)
-//         .collect();
-//
-//     // 查找 ID 为 0 的棋子的占用格子
-//     if let Some((_, collision_volume)) = world
-//         .query::<(&BlockId, &CollisionVolume)>()
-//         .iter()
-//         .find(|(_, (block_id, _))| block_id.block_id == "0")
-//     {
-//         // 判断是否有任意占用格子在出口格子列表中
-//         if collision_volume.1
-//             .occupied_cells
-//             .iter()
-//             .any(|cell| exit_positions.contains(cell))
-//         {
-//             *game_state = GameState::GameOver; // 游戏结束
-//             println!("Game Over! Block ID 0 reached the exit.");
-//         }
-//     }
-// }
 
 impl event::EventHandler<ggez::GameError> for Game {
     fn update(&mut self, context: &mut Context) -> GameResult {
