@@ -11,6 +11,7 @@ use std::sync::Mutex;
 use lazy_static::lazy_static;
 use glam::Vec2;
 
+use crate::{board::ExitPosition, game::EXIT_KEY, game::EXIT_POSITIONS};
 pub static mut MAP_WIDTH: u8 = 0;
 pub static mut MAP_HEIGHT: u8 = 0;
 const TILE_WIDTH: f32 = 100.0;
@@ -23,7 +24,7 @@ lazy_static! {
 
 fn set_selected_block_id(id: String) {
     let mut block_id = SELECTED_BLOCK_ID.lock().unwrap();
-    *block_id = id.to_string();
+    *block_id = id;
 }
 
 fn get_selected_block_id() -> String {
@@ -60,6 +61,11 @@ pub unsafe fn select_block( context: &mut Context) {
 
 // todo
 pub unsafe fn move_block(world: &mut World, context: &mut Context) {
+
+    if get_selected_block_id() == ""{
+        return;
+    }
+
     let mut to_move: Vec<(Entity, KeyCode)> = Vec::new();
 
     // get all the movables and immovables
@@ -83,7 +89,7 @@ pub unsafe fn move_block(world: &mut World, context: &mut Context) {
         .map(|t| ((t.1 .0.x, t.1 .0.y), t.0))
         .collect::<HashMap<_, _>>();
 
-    for (_, (position, block_id, size, block_escape_type)) in 
+    for (current_entity, (position, block_id, size, block_escape_type)) in 
     world.query::<(&mut PositionDuringGame, &BlockId, &Size, &BlockEscapeType)>().iter() {
         if block_id.block_id == get_selected_block_id() {
             if context.keyboard.is_key_repeated() {
@@ -97,7 +103,7 @@ pub unsafe fn move_block(world: &mut World, context: &mut Context) {
             } else if context.keyboard.is_key_pressed(KeyCode::Down) {
                 KeyCode::Down
             } else if context.keyboard.is_key_pressed(KeyCode::Left) {
-                println!("move left!");
+                // println!("move left!");
                 KeyCode::Left
             } else if context.keyboard.is_key_pressed(KeyCode::Right) {
                 KeyCode::Right
@@ -228,12 +234,18 @@ pub unsafe fn move_block(world: &mut World, context: &mut Context) {
                     // if it exists, we try to move it and continue
                     // if it doesn't exist, we continue and try to find an immovable instead
                     match mov.get(&pos) {
-                        Some(entity) => to_move.push((*entity, key)),
+                        Some(entity) => {
+                            let entity_to_check = (*entity, key); // 要检查的元素
+                            if !to_move.iter().any(|&x| x == entity_to_check) {
+                                to_move.push(entity_to_check); // 如果不存在相同元素，则添加
+                            } 
+                        },
                         None => {
                             match mov_collision_volume.get(&pos){
                                 Some(entity) => {
                                     let entity_to_check = (*entity, key); // 要检查的元素
                                     if !to_move.iter().any(|&x| x == entity_to_check) {
+                                        print!("push");
                                         to_move.push(entity_to_check); // 如果不存在相同元素，则添加
                                     } 
                                 },
@@ -247,8 +259,81 @@ pub unsafe fn move_block(world: &mut World, context: &mut Context) {
                         }
                     }
                 }
+            }
+
+            // 处理可以逃出棋子的case
+            if block_escape_type.block_type == BlockType::Special && EXIT_KEY == key && to_move.is_empty() {
+                let mut exit_adjacenct_positions :Vec<PositionDuringGame>= vec![];
+
+                match key {
+                    KeyCode::Down => {
+                        for i in 0..size.width {
+                            exit_adjacenct_positions.push(
+                                PositionDuringGame{
+                                    x: position.x + i,
+                                    y: position.y + size.height,
+                                    z: 6 as u8,
+                                }
+                            );
+                        }
+                    },
+                    KeyCode::Up => {
+                        for i in 0..size.width {
+                            exit_adjacenct_positions.push(
+                                PositionDuringGame{
+                                    x: position.x + i,
+                                    y: position.y - 1,
+                                    z: 6 as u8,
+                                }
+                            );
+                        }
+                    },
+                    KeyCode::Left => {
+                        for i in 0..size.height {
+                            exit_adjacenct_positions.push(
+                                PositionDuringGame{
+                                    x: position.x - 1,
+                                    y: position.y + i,
+                                    z: 6 as u8,
+                                }
+                            );
+                        }
+                    },
+                    KeyCode::Right => {
+                        for i in 0..size.height {
+                            exit_adjacenct_positions.push(
+                                PositionDuringGame{
+                                    x: position.x + size.width,
+                                    y: position.y + i,
+                                    z: 6 as u8,
+                                }
+                            );
+                        }
+                    },
+                    _ => ()
+                }
+
+                println!("exit_adjacenct_positions: {:?}",exit_adjacenct_positions);
+                
+                for ele in exit_adjacenct_positions {
+
+                    match EXIT_POSITIONS.contains(&ele) {
+                        true => {
+                            let entity_to_check = (current_entity, key); // 要检查的元素
+                            if !to_move.iter().any(|&x| x == entity_to_check) {
+                                to_move.push(entity_to_check); // 如果不存在相同元素，则添加
+                            } 
+                        },
+                        false => {
+                            to_move.clear();
+                            break;
+                        },
+                    }
+                    
+                }
                 
             }
+        
         }
     }
 
@@ -263,24 +348,33 @@ pub unsafe fn move_block(world: &mut World, context: &mut Context) {
                 for cell in volume.occupied_cells.iter_mut() {
                     cell.y -= 1; // 更新 occupied_cells 中的 y 坐标
                 }
+
+                set_selected_block_id("".to_string());
+
             },
             KeyCode::Down => {
                 position.y += 1;
                 for cell in volume.occupied_cells.iter_mut() {
                     cell.y += 1; // 更新 occupied_cells 中的 y 坐标
                 }
+
+                set_selected_block_id("".to_string());
             },
             KeyCode::Left => {
                 position.x -= 1;
                 for cell in volume.occupied_cells.iter_mut() {
                     cell.x -= 1; // 更新 occupied_cells 中的 x 坐标
                 }
+
+                set_selected_block_id("".to_string());
             },
             KeyCode::Right => {
                 position.x += 1;
                 for cell in volume.occupied_cells.iter_mut() {
                     cell.x += 1; // 更新 occupied_cells 中的 x 坐标
                 }
+
+                set_selected_block_id("".to_string());
             },
             _ => (),
         }

@@ -5,7 +5,7 @@ pub struct WallDuringGame {}
 pub struct BlockDuringGame {}
 
 pub struct ExitDuringGame {
-    passable_by: Vec<BlockType>,
+    // passable_by: Vec<BlockType>,
 }
 
 
@@ -41,7 +41,7 @@ pub struct Renderable {
     pub path: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum BlockType {
     Regular,   // 普通棋子
     Special,   // 可以通过 Exit 的特殊棋子
@@ -92,7 +92,7 @@ pub fn create_block(
     println!("==============================================");
 
     world.spawn((
-        PositionDuringGame { z: 10, ..position },
+        PositionDuringGame { z: 9, ..position },
         Renderable {
             path: "/images/".to_string() + block_id + ".png",
         },
@@ -118,9 +118,7 @@ pub fn create_exit(world: &mut World, position: PositionDuringGame) -> Entity {
         Renderable {
             path: "/images/exit.png".to_string(),
         },
-        ExitDuringGame{ 
-            passable_by: vec![BlockType::Special],
-        },
+        ExitDuringGame{},
         Immovable {},
     ))
 }

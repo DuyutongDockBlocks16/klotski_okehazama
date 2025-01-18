@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::option::Option;
 use ggez::{
     conf, event,
+    input::keyboard::KeyCode,
     Context, GameResult,
 };
 
@@ -11,6 +12,10 @@ use regex::Regex;
 use std::path;
 use crate::entity::{*};
 use crate::rendering::{*};
+
+pub static mut EXIT_POSITIONS: Vec<PositionDuringGame> = vec![];
+pub static mut EXIT_KEY: KeyCode = KeyCode::Down;
+pub static mut GAME_STATE: GameState = GameState::Running;
 
 pub enum GameState {
     Running,
@@ -99,7 +104,7 @@ impl event::EventHandler<ggez::GameError> for Game {
     }
 }
 
-pub unsafe fn initialize_level(board_with_blocks: &Board, world: &mut World) {
+pub unsafe fn initialize_level(board_with_blocks: &Board, world: &mut World, exit_side: &ExitSide) {
 
     let mut map = vec!
     [
@@ -190,10 +195,10 @@ pub unsafe fn initialize_level(board_with_blocks: &Board, world: &mut World) {
     // 使用调试模式打印
     println!("{:?}", block_dict);
     
-    load_map(world, map_string, block_dict);
+    load_map(world, map_string, block_dict, *exit_side);
 }
 
-pub fn load_map(world: &mut World, map_string: String, block_dict: HashMap<String, (u8, u8, bool)> ) {
+pub unsafe fn load_map(world: &mut World, map_string: String, block_dict: HashMap<String, (u8, u8, bool)>, exit_side: ExitSide ) {
     // read all lines
     let rows: Vec<&str> = map_string.trim().split('\n').map(|x| x.trim()).collect();
 
@@ -220,6 +225,20 @@ pub fn load_map(world: &mut World, map_string: String, block_dict: HashMap<Strin
                     create_wall(world, position);
                 }
                 "E" => {
+                    unsafe {
+                        EXIT_KEY = match exit_side {
+                            ExitSide::Bottom => KeyCode::Down,
+                            ExitSide::Top => KeyCode::Up,
+                            ExitSide::Left => KeyCode::Left,
+                            ExitSide::Right => KeyCode::Right,                            
+                        };
+                        let exit_position = PositionDuringGame {
+                            x: position.x,
+                            y: position.y,
+                            z: 6 as u8
+                        };
+                        EXIT_POSITIONS.push(exit_position);
+                    }
                     create_exit(world, position);
                 }
                 c if digit_regex.is_match(c) => {
@@ -450,7 +469,7 @@ impl Game {
     
         // load world to get ready for rendering
         let mut world = World::new();
-        initialize_level(&self.board_with_blocks, &mut world);
+        initialize_level(&self.board_with_blocks, &mut world, &self.board_with_blocks.exit_position.side);
 
         self.world = world;
     }
