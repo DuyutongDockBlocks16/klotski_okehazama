@@ -17,6 +17,7 @@ pub static mut MAP_HEIGHT: u8 = 0;
 const TILE_WIDTH: f32 = 100.0;
 
 use crate::entity::{*};
+use crate::components::*;
 
 lazy_static! {
     static ref SELECTED_BLOCK_ID: Mutex<String> = Mutex::new(String::new());
@@ -380,53 +381,6 @@ pub unsafe fn move_block(world: &mut World, context: &mut Context) {
         }
     }
 }
-
-// fn single_cell_block_move_desicion(key: KeyCode, to_move: Vec<(Entity, KeyCode)>, position: &mut PositionDuringGame, mov: Vec<(Entity, KeyCode)>, ) {
-//     let (start, end, is_x) = match key {
-//         KeyCode::Up => (position.y, 0, false),
-//         KeyCode::Down => (position.y, MAP_HEIGHT - 1, false),
-//         KeyCode::Left => (position.x, 0, true),
-//         KeyCode::Right => (position.x, MAP_WIDTH - 1, true),
-//         _ => continue,
-//     };
-
-//     let range = if start < end {
-//         (start..=end).collect::<Vec<_>>()
-//     } else {
-//         (end..=start).rev().collect::<Vec<_>>()
-//     };
-
-//     for x_or_y in range {
-//         let pos = if is_x {
-//             (x_or_y, position.y)
-//         } else {
-//             (position.x, x_or_y)
-//         };
-
-//         // find a movable
-//         // if it exists, we try to move it and continue
-//         // if it doesn't exist, we continue and try to find an immovable instead
-//         match mov.get(&pos) {
-//             Some(entity) => to_move.push((*entity, key)),
-//             None => {
-//                 match mov_collision_volume.get(&pos){
-//                     Some(entity) => {
-//                         let entity_to_check = (*entity, key); // 要检查的元素
-//                         if !to_move.iter().any(|&x| x == entity_to_check) {
-//                             to_move.push(entity_to_check); // 如果不存在相同元素，则添加
-//                         } 
-//                     },
-//                     None => {
-//                         match immov.get(&pos) {
-//                             Some(_id) => to_move.clear(),
-//                             None => break,
-//                         }
-//                     }
-//                 }
-//             }
-//         }
-//     }
-// }
 
 pub fn run_rendering(world: &World, context: &mut Context) {
     // Clearing the screen (this gives us the background colour)

@@ -8,7 +8,7 @@ mod board;
 mod game;
 mod entity;
 mod rendering;
-
+mod components;
 
 fn initialize_box() -> Board {
     let height:u8 = 5;

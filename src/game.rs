@@ -10,8 +10,9 @@ use ggez::{
 use hecs::World;
 use regex::Regex;
 use std::path;
-use crate::entity::{*};
-use crate::rendering::{*};
+use crate::entity::*;
+use crate::rendering::*;
+use crate::components::*;
 
 pub static mut EXIT_POSITIONS: Vec<PositionDuringGame> = vec![];
 pub static mut EXIT_KEY: KeyCode = KeyCode::Down;
