@@ -2,6 +2,10 @@ use crate::events::Event;
 use std::fmt;
 use std::fmt::Display;
 use std::time::Duration;
+use ggez::audio;
+use ggez::audio::SoundSource;
+use ggez::Context;
+use std::collections::HashMap;
 
 pub struct WallDuringGame {}
 
@@ -81,4 +85,24 @@ impl Display for GameplayState {
 pub struct Gameplay {
     pub state: GameplayState,
     pub moves_count: u32,
+}
+
+#[derive(Default)]
+pub struct AudioStore {
+    pub sounds: HashMap<String, std::boxed::Box<audio::Source>>,
+}
+
+impl AudioStore {
+    pub fn play_sound(&mut self, context: &mut Context, sound: &str) {
+        if let Some(source) = self.sounds.get_mut(sound) {
+            if source.play_detached(context).is_ok() {
+                println!("Playing sound: {}", sound);
+            }
+        }
+    }
+}
+
+#[derive(Default)]
+pub struct Time {
+    pub delta: Duration,
 }

@@ -2,7 +2,7 @@ use hecs::Entity;
 
 #[derive(Debug)]
 pub struct BlockMoved {
-    pub entities: Vec<Entity>,
+    pub entity: Entity,
 }
 
 #[derive(Debug)]

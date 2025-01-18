@@ -430,6 +430,12 @@ impl Game {
     
         // load world to get ready for rendering
         let mut world = World::new();
+
+        create_gameplay(&mut world);
+        create_time(&mut world);
+        create_event_queue(&mut world);
+        create_audio_store(&mut world);
+
         initialize_level(&self.board_with_blocks, &mut world, &self.board_with_blocks.exit_position.side);
 
         self.world = world;

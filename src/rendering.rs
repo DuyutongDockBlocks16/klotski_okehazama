@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use hecs::{Entity, World};
+use crate::events::*;
 
 use ggez::{
     graphics::{self, DrawParam, Image},
@@ -65,6 +66,7 @@ pub unsafe fn move_block(world: &mut World, context: &mut Context) {
     }
 
     let mut to_move: Vec<(Entity, KeyCode)> = Vec::new();
+    let mut events = Vec::new();
 
     // get all the movables and immovables
     let mov: HashMap<(u8, u8), Entity> = world
@@ -157,6 +159,7 @@ pub unsafe fn move_block(world: &mut World, context: &mut Context) {
                                         match immov.get(&pos) {
                                             Some(_id) => {
                                                 to_move.clear();
+                                                events.push(Event::BlockHitObstacle {});
                                                 can_not_move_flag = true;
                                             },
                                             None => break,
@@ -206,6 +209,7 @@ pub unsafe fn move_block(world: &mut World, context: &mut Context) {
                                         match immov.get(&pos) {
                                             Some(_id) => {
                                                 to_move.clear();
+                                                events.push(Event::BlockHitObstacle {});
                                                 can_not_move_flag = true;
                                             },
                                             None => break,
@@ -249,7 +253,11 @@ pub unsafe fn move_block(world: &mut World, context: &mut Context) {
                                 },
                                 None => {
                                     match immov.get(&pos) {
-                                        Some(_id) => to_move.clear(),
+                                        Some(_id) => {
+                                            to_move.clear();
+                                            events.push(Event::BlockHitObstacle {});
+                                            break;
+                                        },
                                         None => break,
                                     }
                                 }
@@ -327,6 +335,7 @@ pub unsafe fn move_block(world: &mut World, context: &mut Context) {
                             break;
                         },
                     }
+
                     
                 }
                 
@@ -376,7 +385,17 @@ pub unsafe fn move_block(world: &mut World, context: &mut Context) {
             },
             _ => (),
         }
+
+        events.push(Event::BlockMoved(BlockMoved { entity }));
+
     }
+
+    {
+        let mut query = world.query::<&mut EventQueue>();
+        let event_queue = query.iter().next().unwrap().1;
+        event_queue.events.append(&mut events);
+    }
+
 }
 
 pub fn run_rendering(world: &World, context: &mut Context) {

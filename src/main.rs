@@ -11,6 +11,7 @@ mod rendering;
 mod components;
 mod constants;
 mod events;
+mod event_process;
 
 fn initialize_box() -> Board {
     let height:u8 = 5;

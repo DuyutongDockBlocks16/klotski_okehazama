@@ -92,3 +92,19 @@ pub fn create_floor(world: &mut World, position: PositionDuringGame) -> Entity {
         },
     ))
 }
+
+pub fn create_gameplay(world: &mut World) -> Entity {
+    world.spawn((Gameplay::default(),))
+}
+
+pub fn create_time(world: &mut World) -> Entity {
+    world.spawn((Time::default(),))
+}
+
+pub fn create_event_queue(world: &mut World) -> Entity {
+    world.spawn((EventQueue::default(),))
+}
+
+pub fn create_audio_store(world: &mut World) -> Entity {
+    world.spawn((AudioStore::default(),))
+}
