@@ -1,3 +1,8 @@
+use crate::events::Event;
+use std::fmt;
+use std::fmt::Display;
+use std::time::Duration;
+
 pub struct WallDuringGame {}
 
 pub struct BlockDuringGame {}
@@ -11,6 +16,11 @@ pub struct ExitDuringGame {
 pub struct Movable;
 
 pub struct Immovable;
+
+#[derive(Default)]
+pub struct EventQueue {
+    pub events: Vec<Event>,
+}
 
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
 pub struct PositionDuringGame {
@@ -47,4 +57,28 @@ pub enum BlockType {
 
 pub struct BlockEscapeType {
     pub block_type: BlockType,
+}
+
+#[derive(Default)]
+pub enum GameplayState {
+    #[default]
+    Playing,
+    Won,
+}
+
+
+impl Display for GameplayState {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.write_str(match self {
+            GameplayState::Playing => "Playing",
+            GameplayState::Won => "Won",
+        })?;
+        Ok(())
+    }
+}
+
+#[derive(Default)]
+pub struct Gameplay {
+    pub state: GameplayState,
+    pub moves_count: u32,
 }

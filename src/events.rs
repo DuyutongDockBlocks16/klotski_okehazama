@@ -11,7 +11,7 @@ pub enum Event {
     BlockHitObstacle,
 
     // Fired when an entity is moved
-    BlockMoved(EntityMoved),
+    BlockMoved(BlockMoved),
 
     // Fired when the box is placed on a spot
     TargetBlockReachExit,
