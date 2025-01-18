@@ -1,6 +1,3 @@
-use specs::{Component, NullStorage, VecStorage, World, WorldExt};
-
-
 pub struct WallDuringGame {}
 
 pub struct BlockDuringGame {}
