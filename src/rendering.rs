@@ -11,12 +11,9 @@ use std::sync::Mutex;
 use lazy_static::lazy_static;
 use glam::Vec2;
 
-use crate::{board::ExitPosition, game::EXIT_KEY, game::EXIT_POSITIONS};
-pub static mut MAP_WIDTH: u8 = 0;
-pub static mut MAP_HEIGHT: u8 = 0;
-const TILE_WIDTH: f32 = 100.0;
+use crate::constants::{EXIT_KEY, EXIT_POSITIONS, MAP_WIDTH, MAP_HEIGHT, TILE_WIDTH};
 
-use crate::entity::{*};
+
 use crate::components::*;
 
 lazy_static! {

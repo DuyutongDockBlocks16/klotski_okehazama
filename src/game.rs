@@ -13,10 +13,7 @@ use std::path;
 use crate::entity::*;
 use crate::rendering::*;
 use crate::components::*;
-
-pub static mut EXIT_POSITIONS: Vec<PositionDuringGame> = vec![];
-pub static mut EXIT_KEY: KeyCode = KeyCode::Down;
-pub static mut GAME_STATE: GameState = GameState::Running;
+use crate::constants::{MAP_HEIGHT, MAP_WIDTH, EXIT_KEY, EXIT_POSITIONS};
 
 pub enum GameState {
     Running,
@@ -297,7 +294,7 @@ impl Game {
         println!("\nGrid State:");
         // 从最后一行开始向上迭代
         for (y, row) in self.grid.iter().enumerate().rev() {
-            for (x, cell) in row.iter().enumerate() {
+            for (_, cell) in row.iter().enumerate() {
                 match cell {
                     Some(block) => print!("B{} ", block.block_id),
                     None => print!(".  "),
