@@ -1,16 +1,18 @@
 use std::collections::HashMap;
 use hecs::{Entity, World};
+use itertools::Itertools;
 use crate::events::*;
-
 use ggez::{
-    graphics::{self, DrawParam, Image},
+    graphics::{self, Canvas, Color, DrawParam, Image, PxScale, Text, TextFragment},
     input::keyboard::KeyCode,
     Context,
 };
 
+
 use std::sync::Mutex;
 use lazy_static::lazy_static;
 use glam::Vec2;
+use std::time::Duration;
 
 use crate::constants::{EXIT_KEY, EXIT_POSITIONS, MAP_WIDTH, MAP_HEIGHT, TILE_WIDTH};
 
@@ -44,12 +46,36 @@ pub unsafe fn select_block( context: &mut Context) {
         println!("0 pressed!");
         0
     } else if context.keyboard.is_key_pressed(KeyCode::Key1) {
+        println!("1 pressed!");
         1
     } else if context.keyboard.is_key_pressed(KeyCode::Key2) {
+        println!("2 pressed!");
         2
+    } else if context.keyboard.is_key_pressed(KeyCode::Key3) {
+        println!("3 pressed!");
+        3
+    } else if context.keyboard.is_key_pressed(KeyCode::Key4) {
+        println!("4 pressed!");
+        4
+    } else if context.keyboard.is_key_pressed(KeyCode::Key5) {
+        println!("5 pressed!");
+        5
+    } else if context.keyboard.is_key_pressed(KeyCode::Key6) {
+        println!("6 pressed!");
+        6
+    } else if context.keyboard.is_key_pressed(KeyCode::Key7) {
+        println!("7 pressed!");
+        7
+    } else if context.keyboard.is_key_pressed(KeyCode::Key8) {
+        println!("8 pressed!");
+        8
+    } else if context.keyboard.is_key_pressed(KeyCode::Key9) {
+        println!("9 pressed!");
+        9
     } else {
         return;
     };
+    
 
 
     println!("selected_id: {:?}", selected_id);
@@ -335,13 +361,25 @@ pub unsafe fn move_block(world: &mut World, context: &mut Context) {
                             break;
                         },
                     }
-
+                    
+                    {
+                        let mut query = world.query::<&mut Gameplay>();
+                        let gameplay = query.iter().next().unwrap().1;
+                        gameplay.state = GameplayState::Won;
+                    }
                     
                 }
                 
             }
         
         }
+    }
+
+    // Update gameplay moves
+    if !to_move.is_empty() {
+        let mut query = world.query::<&mut Gameplay>();
+        let gameplay = query.iter().next().unwrap().1;
+        gameplay.moves_count += 1;
     }
 
     // Now actually move what needs to be moved
@@ -402,6 +440,11 @@ pub fn run_rendering(world: &World, context: &mut Context) {
     // Clearing the screen (this gives us the background colour)
     let mut canvas =
         graphics::Canvas::from_frame(context, graphics::Color::from([0.95, 0.95, 0.95, 1.0]));
+    // ANCHOR_END: run_rendering
+
+    // Get time
+    let mut query = world.query::<&Time>();
+    let time = query.iter().next().unwrap().1;
 
     // Get all the renderables with their positions and sort by the position z
     // This will allow us to have entities layered visually.
@@ -409,20 +452,94 @@ pub fn run_rendering(world: &World, context: &mut Context) {
     let mut rendering_data: Vec<(Entity, (&PositionDuringGame, &Renderable))> = query.into_iter().collect();
     rendering_data.sort_by_key(|&k| k.1 .0.z);
 
-    // Iterate through all pairs of positions & renderables, load the image
-    // and draw it at the specified position.
+    // ANCHOR: rendering_batches
+    let mut rendering_batches: HashMap<u8, HashMap<String, Vec<DrawParam>>> = HashMap::new();
+
+    // Iterate each of the renderables, determine which image path should be rendered
+    // at which drawparams, and then add that to the rendering_batches.
     for (_, (position, renderable)) in rendering_data.iter() {
         // Load the image
-        let image = Image::from_path(context, renderable.path.clone()).unwrap();
+        let image_path = get_image(renderable, time.delta);
         let x = position.x as f32 * TILE_WIDTH;
         let y = position.y as f32 * TILE_WIDTH;
+        let z = position.z;
 
         // draw
-        let draw_params = DrawParam::new().dest(Vec2::new(x, y));
-        canvas.draw(&image, draw_params);
+        let draw_param = DrawParam::new().dest(Vec2::new(x, y));
+        rendering_batches
+            .entry(z)
+            .or_default()
+            .entry(image_path)
+            .or_default()
+            .push(draw_param);
     }
+    // ANCHOR_END: rendering_batches
 
+    // ANCHOR: rendering_batches_2
+    // Iterate spritebatches ordered by z and actually render each of them
+    for (_z, group) in rendering_batches
+        .iter()
+        .sorted_by(|a, b| Ord::cmp(&a.0, &b.0))
+    {
+        for (image_path, draw_params) in group {
+            let image = Image::from_path(context, image_path).unwrap();
+            let mut mesh_batch = graphics::InstanceArray::new(context, Some(image));
+
+            for draw_param in draw_params.iter() {
+                mesh_batch.push(*draw_param);
+            }
+
+            canvas.draw(&mesh_batch, graphics::DrawParam::new());
+        }
+    }
+    // ANCHOR_END: rendering_batches_2
+
+    // Render any text
+    let mut query = world.query::<&Gameplay>();
+    let gameplay = query.iter().next().unwrap().1;
+
+    draw_text(&mut canvas, &format!("Status: {}", &gameplay.state.to_string()), 620.0, 80.0);
+    draw_text(&mut canvas, &format!("Move Count: {}", &gameplay.moves_count.to_string()), 620.0, 100.0);
+
+    // ANCHOR: render_fps
+    // Render FPS
+    let fps = format!("FPS: {:.0}", context.time.fps());
+    draw_text(&mut canvas, &fps, 620.0, 120.0);
+    // ANCHOR_END: render_fps
+
+    // ANCHOR: run_rendering_end
     // Finally, present the canvas, this will actually display everything
     // on the screen.
     canvas.finish(context).expect("expected to present");
+}
+
+pub fn draw_text(canvas: &mut Canvas, text_string: &str, x: f32, y: f32) {
+    let text = Text::new(TextFragment {
+        text: text_string.to_string(),
+        color: Some(Color::new(0.0, 0.0, 0.0, 1.0)),
+        scale: Some(PxScale::from(20.0)),
+        ..Default::default()
+    });
+
+    canvas.draw(&text, Vec2::new(x, y));
+}
+
+
+pub fn get_image(renderable: &Renderable, delta: Duration) -> String {
+    let path_index = match renderable.kind() {
+        RenderableKind::Static => {
+            // We only have one image, so we just return that
+            0
+        }
+        RenderableKind::Animated => {
+            // If we have multiple, we want to select the right one based on the delta time.
+            // First we get the delta in milliseconds, we % by 1000 to get the milliseconds
+            // only and finally we divide by 250 to get a number between 0 and 4. If it's 4
+            // we technically are on the next iteration of the loop (or on 0), but we will let
+            // the renderable handle this logic of wrapping frames.
+            ((delta.as_millis() % 1000) / 250) as usize
+        }
+    };
+
+    renderable.path(path_index)
 }

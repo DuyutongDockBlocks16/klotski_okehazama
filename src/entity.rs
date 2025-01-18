@@ -43,9 +43,12 @@ pub fn create_block(
 
     world.spawn((
         PositionDuringGame { z: 9, ..position },
-        Renderable {
-            path: "/images/".to_string() + block_id + ".png",
-        },
+
+        Renderable::new_static(&format!("/images/{}.png", block_id)),
+
+        // Renderable {
+        //     path: "/images/".to_string() + block_id + ".png",
+        // },
         BlockId {
             block_id: block_id.to_string(),
         },
@@ -65,9 +68,12 @@ pub fn create_block(
 pub fn create_exit(world: &mut World, position: PositionDuringGame) -> Entity {
     world.spawn((
         PositionDuringGame { z: 6, ..position },
-        Renderable {
-            path: "/images/exit.png".to_string(),
-        },
+
+        Renderable::new_static("/images/exit.png"),
+
+        // Renderable {
+        //     path: "/images/exit.png".to_string(),
+        // },
         ExitDuringGame{},
         Immovable {},
     ))
@@ -76,9 +82,12 @@ pub fn create_exit(world: &mut World, position: PositionDuringGame) -> Entity {
 pub fn create_wall(world: &mut World, position: PositionDuringGame) -> Entity {
     world.spawn((
         PositionDuringGame { z: 10, ..position },
-        Renderable {
-            path: "/images/mountain.png".to_string(),
-        },
+
+        Renderable::new_static("/images/mountain.png"),
+
+        // Renderable {
+        //     path: "/images/mountain.png".to_string(),
+        // },
         WallDuringGame {},
         Immovable {},
     ))
@@ -87,9 +96,10 @@ pub fn create_wall(world: &mut World, position: PositionDuringGame) -> Entity {
 pub fn create_floor(world: &mut World, position: PositionDuringGame) -> Entity {
     world.spawn((
         PositionDuringGame { z: 5, ..position },
-        Renderable {
-            path: "/images/floor.png".to_string(),
-        },
+        Renderable::new_static("/images/floor.png"),
+        // Renderable {
+        //     path: "/images/floor.png".to_string(),
+        // },
     ))
 }
 

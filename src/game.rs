@@ -52,6 +52,10 @@ impl event::EventHandler<ggez::GameError> for Game {
             move_block(&mut self.world, context);
         }
 
+        let mut query = self.world.query::<&mut crate::components::Time>();
+        let time = query.iter().next().unwrap().1;
+        time.delta += context.time.delta();
+
         Ok(())
     }
 

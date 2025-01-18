@@ -1174,6 +1174,7 @@ dependencies = [
  "ggez",
  "glam",
  "hecs",
+ "itertools",
  "lazy_static",
  "log",
  "regex",

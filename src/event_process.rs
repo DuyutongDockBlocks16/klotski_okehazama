@@ -54,7 +54,7 @@ pub fn run_process_events(world: &mut World, context: &mut Context) {
             }
             Event::TargetBlockReachExit => {
                 // play sound here
-                let sound = "correct";
+                let sound = "win";
 
                 audio_store.play_sound(context, sound);
             }

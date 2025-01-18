@@ -2,7 +2,7 @@
   {
     "block_id": 0,
     "block_english_name": "Imagawa Yoshimoto",
-    "block_japanese_name": "今川義元",
+    "block_japanese_name": "今川 義元",
     "width": 2,
     "height": 2,
     "initial_location": [1, 4],
@@ -11,7 +11,7 @@
   ,{
     "block_id": 1,
     "block_english_name": "Oda Nobunaga",
-    "block_japanese_name": "織田信長",
+    "block_japanese_name": "織田 信長",
     "width": 2,
     "height": 1,
     "initial_location": [1, 2],
@@ -19,11 +19,74 @@
   }
   ,{
     "block_id": 2,
+    "block_english_name": "Sakuma Nobumori",
+    "block_japanese_name": "佐久間 信盛",
+    "width": 1,
+    "height": 2,
+    "initial_location": [3, 4],
+    "can_escape": false
+  }
+  ,{
+    "block_id": 3,
+    "block_english_name": "Mori Yoshinari",
+    "block_japanese_name": "森 可成",
+    "width": 1,
+    "height": 2,
+    "initial_location": [0, 4],
+    "can_escape": false
+  }
+  ,{
+    "block_id": 4,
+    "block_english_name": "Shibata Katsuie",
+    "block_japanese_name": "柴田 勝家",
+    "width": 1,
+    "height": 2,
+    "initial_location": [0, 2],
+    "can_escape": false
+  }
+  ,{
+    "block_id": 5,
+    "block_english_name": "Niwa Nagahide",
+    "block_japanese_name": "丹羽 長秀",
+    "width": 1,
+    "height": 2,
+    "initial_location": [3, 2],
+    "can_escape": false
+  }
+  ,{
+    "block_id": 6,
     "block_english_name": "Mōri Yoshikatsu",
-    "block_japanese_name": "毛利良勝",
+    "block_japanese_name": "毛利 良勝",
     "width": 1,
     "height": 1,
-    "initial_location": [3, 4],
+    "initial_location": [1, 1],
+    "can_escape": false
+  }
+  ,{
+    "block_id": 7,
+    "block_english_name": "Hattori Kazutada",
+    "block_japanese_name": "服部 一忠",
+    "width": 1,
+    "height": 1,
+    "initial_location": [2, 1],
+    "can_escape": false
+  }
+  ,{
+    "block_id": 8,
+    "block_english_name": "Senshū Suetada",
+    "block_japanese_name": "千秋 季忠",
+    "width": 1,
+    "height": 1,
+    "initial_location": [0, 0],
+    "can_escape": false
+  }
+  ,{
+    "block_id": 9,
+    "block_english_name": "Sassa Masatsugu",
+    "block_japanese_name": "佐々 政次",
+    "width": 1,
+    "height": 1,
+    "initial_location": [3, 0],
     "can_escape": false
   }
 ]
