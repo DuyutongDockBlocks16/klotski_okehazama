@@ -525,6 +525,38 @@ pub fn run_rendering(world: &World, context: &mut Context) {
 
     draw_text(&mut canvas, &format!("Selected Block: {}", &gameplay.seleced_block_id.to_string()), 620.0, 140.0);
 
+    let instructions = [
+        "Save Imagawa Yoshimoto!",
+        "",
+        "Step into the world of strategy and history with this captivating",
+        "rendition of the classic Klotski puzzle!",
+        "",
+        "Your mission: rescue Imagawa Yoshimoto, who is trapped in the",
+        "narrow passes of Okehazama, and guide him safely to",
+        "Okazaki Castle.",
+        "",
+        "How to Play:",
+        "Each block in the puzzle has a number displayed in its top-left corner.",
+        "Use the number keys (0–9) above the letter keys on your keyboard",
+        "to select the block you wish to move.",
+        "After selecting a block, use the arrow keys (↑, ↓, ←, →) to",
+        "navigate the block in the desired direction.",
+        "Repeat the process until Imagawa Yoshimoto reaches the exit.",
+        "",
+        "Win Condition:",
+        "Achieve victory by moving Imagawa Yoshimoto to the exit.",
+        "It's time to rewrite history!",
+        "",
+        "Ready to Rewrite History? TRY HARD!",
+    ];
+
+    let mut y = 180.0; // Starting y-coordinate
+    for line in &instructions {
+        draw_text(&mut canvas, line, 620.0, y); // Adjust x and y positions as needed
+        y += 20.0; // Increment y-coordinate for the next line
+    }
+
+
     // ANCHOR: run_rendering_end
     // Finally, present the canvas, this will actually display everything
     // on the screen.
