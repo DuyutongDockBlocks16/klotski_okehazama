@@ -48,7 +48,7 @@ pub struct Game {
 impl event::EventHandler<ggez::GameError> for Game {
     fn update(&mut self, context: &mut Context) -> GameResult {
         unsafe {
-            select_block( context);
+            select_block(&mut self.world, context);
             move_block(&mut self.world, context);
         }
 
@@ -449,7 +449,7 @@ impl Game {
 
         let context_builder = ggez::ContextBuilder::new("klotski_okehazama", "Yutong Du")
             .window_setup(conf::WindowSetup::default().title("Klotski Okehazama!"))
-            .window_mode(conf::WindowMode::default().dimensions(800.0, 800.0))
+            .window_mode(conf::WindowMode::default().dimensions(900.0, 800.0))
             .add_resource_path(path::PathBuf::from("./resources"));
 
         let (context, event_loop) = context_builder.build()?;

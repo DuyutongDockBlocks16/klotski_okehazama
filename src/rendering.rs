@@ -33,7 +33,7 @@ fn get_selected_block_id() -> String {
     block_id.clone()
 }
 
-pub unsafe fn select_block( context: &mut Context) {
+pub unsafe fn select_block(world: &mut World, context: &mut Context) {
 
     if get_selected_block_id() != ""{
         return;
@@ -81,6 +81,10 @@ pub unsafe fn select_block( context: &mut Context) {
     println!("selected_id: {:?}", selected_id);
 
     set_selected_block_id(selected_id.to_string());
+    let mut query = world.query::<&mut Gameplay>();
+    let gameplay = query.iter().next().unwrap().1;
+    gameplay.seleced_block_id = selected_id.to_string();
+
 
 }
 
@@ -346,6 +350,8 @@ pub unsafe fn move_block(world: &mut World, context: &mut Context) {
                 }
 
                 println!("exit_adjacenct_positions: {:?}",exit_adjacenct_positions);
+
+                let mut all_exit_positions_occupied = true;
                 
                 for ele in exit_adjacenct_positions {
 
@@ -357,21 +363,29 @@ pub unsafe fn move_block(world: &mut World, context: &mut Context) {
                             } 
                         },
                         false => {
+                            all_exit_positions_occupied = false;
                             to_move.clear();
                             break;
                         },
                     }
-                    
-                    {
-                        let mut query = world.query::<&mut Gameplay>();
-                        let gameplay = query.iter().next().unwrap().1;
-                        gameplay.state = GameplayState::Won;
-                    }
-                    
+                }
+
+                if all_exit_positions_occupied == true {
+                    let mut query = world.query::<&mut Gameplay>();
+                    let gameplay = query.iter().next().unwrap().1;
+                    gameplay.state = GameplayState::Won;
                 }
                 
             }
-        
+
+            let selected_id = "";
+            
+            set_selected_block_id(selected_id.to_string());
+            let mut query = world.query::<&mut Gameplay>();
+            let gameplay = query.iter().next().unwrap().1;
+            gameplay.seleced_block_id = selected_id.to_string();
+            println!("get_selected_block_id: {:?}", get_selected_block_id());
+
         }
     }
 
@@ -394,7 +408,7 @@ pub unsafe fn move_block(world: &mut World, context: &mut Context) {
                     cell.y -= 1; // 更新 occupied_cells 中的 y 坐标
                 }
 
-                set_selected_block_id("".to_string());
+                // set_selected_block_id("".to_string());
 
             },
             KeyCode::Down => {
@@ -403,7 +417,7 @@ pub unsafe fn move_block(world: &mut World, context: &mut Context) {
                     cell.y += 1; // 更新 occupied_cells 中的 y 坐标
                 }
 
-                set_selected_block_id("".to_string());
+                // set_selected_block_id("".to_string());
             },
             KeyCode::Left => {
                 position.x -= 1;
@@ -411,7 +425,7 @@ pub unsafe fn move_block(world: &mut World, context: &mut Context) {
                     cell.x -= 1; // 更新 occupied_cells 中的 x 坐标
                 }
 
-                set_selected_block_id("".to_string());
+                // set_selected_block_id("".to_string());
             },
             KeyCode::Right => {
                 position.x += 1;
@@ -419,7 +433,7 @@ pub unsafe fn move_block(world: &mut World, context: &mut Context) {
                     cell.x += 1; // 更新 occupied_cells 中的 x 坐标
                 }
 
-                set_selected_block_id("".to_string());
+                // set_selected_block_id("".to_string());
             },
             _ => (),
         }
@@ -427,6 +441,8 @@ pub unsafe fn move_block(world: &mut World, context: &mut Context) {
         events.push(Event::BlockMoved(BlockMoved { entity }));
 
     }
+
+    
 
     {
         let mut query = world.query::<&mut EventQueue>();
@@ -506,6 +522,8 @@ pub fn run_rendering(world: &World, context: &mut Context) {
     let fps = format!("FPS: {:.0}", context.time.fps());
     draw_text(&mut canvas, &fps, 620.0, 120.0);
     // ANCHOR_END: render_fps
+
+    draw_text(&mut canvas, &format!("Selected Block: {}", &gameplay.seleced_block_id.to_string()), 620.0, 140.0);
 
     // ANCHOR: run_rendering_end
     // Finally, present the canvas, this will actually display everything

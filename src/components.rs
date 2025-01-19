@@ -120,6 +120,7 @@ impl Display for GameplayState {
 pub struct Gameplay {
     pub state: GameplayState,
     pub moves_count: u32,
+    pub seleced_block_id: String,
 }
 
 #[derive(Default)]
